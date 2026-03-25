@@ -269,7 +269,7 @@ Sent securely with Tutanota`;
     // Navigate when the interstitial button is clicked
     if (interstitialButton) {
         interstitialButton.addEventListener('click', () => {
-            window.location.href = 'https://elif1203terminal.github.io/anamem2.html';
+            window.location.href = 'https://Elifterminal.github.io/anamem2.html';
         });
     }
 
