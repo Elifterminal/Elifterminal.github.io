@@ -2,109 +2,113 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>CanyonNet — Internal Park Network</title>
-<meta name="description" content="CanyonNet — the internal social + operations network for Grand Canyon park staff. Live conditions, crews, shift swaps, marketplace. Demo build." />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>CanyonNet — Grand Canyon South Rim · Internal Park Network</title>
+<meta name="description" content="CanyonNet — the internal social + operations network for Grand Canyon South Rim staff. Operated by Delaware North. Live conditions, crews, shift swaps, transit, marketplace. Demo build." />
 <style>
 /* =====================================================
    CANYONNET — internal park social + ops
-   earth palette · canyon strata · professional
+   Delaware North · Grand Canyon South Rim branding
    ===================================================== */
 :root{
-  --sky:#e9f4ff; --sage:#7aa17b; --juniper:#2f4f3a; --sand:#e6d7c3;
-  --canyon:#a04b2a; --canyon-deep:#6d2e1a; --basalt:#1f2523; --paper:#f8f6f1;
+  /* Delaware North brand */
+  --dnc:#1a924b; --dnc-bright:#6cbd45; --dnc-deep:#0f5e30; --dnc-blue:#0070bc; --dnc-teal:#02757d;
+  /* canyon warmth (secondary) */
+  --canyon:#a04b2a; --canyon-deep:#6d2e1a; --sand:#e6d7c3; --paper:#f8f6f1;
+  /* park bus route colors */
+  --r-blue:#2f6fb0; --r-orange:#e08a1e; --r-red:#c0392b; --r-purple:#7d4ea3;
 
-  --bg:#efe9df; --bg-2:#e7dfd1; --fg:#1b2320; --muted:#5a6f64;
-  --term:#ffffff; --border:rgba(35,45,40,.14);
-  --accent1:#2f4f3a; --accent2:#a04b2a; --accent3:#3b6ba5;
-  --ok:#2f9e44; --warn:#b08900; --err:#c92a2a;
-  --card-shadow:0 12px 40px rgba(40,30,20,.12);
-  --scrim:rgba(245,243,237,.46);   /* veil over the canyon so content reads */
+  --bg:#efe9df; --bg-2:#e7dfd1; --fg:#16241b; --muted:#54675b;
+  --term:#ffffff; --border:rgba(20,40,28,.13);
+  --accent1:var(--dnc); --accent2:var(--canyon); --accent3:var(--dnc-blue);
+  --ok:#1a924b; --warn:#b08900; --err:#c92a2a;
+  --card-shadow:0 14px 44px rgba(30,40,25,.16);
+  --scrim:rgba(244,242,235,.50);
 }
 [data-theme="night"]{
-  --bg:#0e1311; --bg-2:#0b100e; --fg:#e9f4ef; --muted:#9fb0a8;
-  --term:#121917; --border:rgba(220,235,225,.13);
-  --accent1:#9ad9b4; --accent2:#ff9c6f; --accent3:#8cc2ff;
-  --card-shadow:0 14px 44px rgba(0,0,0,.5);
-  --scrim:rgba(10,14,12,.42);
+  --dnc:#5fd08a; --dnc-bright:#8fe07a; --dnc-deep:#1a924b; --dnc-blue:#7fb8ff;
+  --bg:#0c1411; --bg-2:#0a110e; --fg:#e9f4ef; --muted:#9fb3a8;
+  --term:#101a16; --border:rgba(180,220,200,.14);
+  --accent1:var(--dnc); --accent2:#ff9c6f; --accent3:var(--dnc-blue);
+  --ok:#5fd08a; --card-shadow:0 16px 48px rgba(0,0,0,.55);
+  --scrim:rgba(7,12,10,.55);
 }
 *{box-sizing:border-box}
 html,body{height:100%}
-body{
-  margin:0; color:var(--fg); overflow-x:hidden;
-  font:15.5px/1.6 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Inter,Arial,"Noto Sans",sans-serif;
-  background:var(--bg);
-}
-/* WebGL canyon sits behind everything; a CSS scrim keeps the UI readable */
-#bg{position:fixed; inset:0; width:100%; height:100%; z-index:-2; display:block}
+body{margin:0; color:var(--fg); overflow-x:hidden;
+  font:15.5px/1.6 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Inter,Arial,"Noto Sans",sans-serif; background:var(--bg)}
+
+/* === real Grand Canyon photo background (per theme) + slow Ken Burns drift === */
+#bg{position:fixed; inset:-4%; z-index:-2; background-size:cover; background-position:center 42%;
+  background-image:url('assets/canyon-sunset.jpg'); transform:scale(1.04);
+  animation:kb 46s ease-in-out infinite alternate; will-change:transform}
+[data-theme="night"] #bg{ background-image:url('assets/canyon-dusk.jpg'); background-position:center 30% }
+@keyframes kb{ from{transform:scale(1.04) translate(0,0)} to{transform:scale(1.13) translate(-1.4%,-1.2%)} }
 #bg-scrim{position:fixed; inset:0; z-index:-1; pointer-events:none; background:
-  linear-gradient(180deg, color-mix(in oklab,var(--bg) 30%, transparent) 0%, var(--scrim) 30%, var(--scrim) 100%);}
+  linear-gradient(180deg, color-mix(in oklab,var(--bg) 35%, transparent), var(--scrim) 26%, var(--scrim) 78%, color-mix(in oklab,var(--bg) 60%, transparent))}
+@media(prefers-reduced-motion:reduce){ #bg{animation:none} }
 
-/* NAV — park signage */
-.nav{position:fixed; inset:0 0 auto 0; height:62px; display:flex; align-items:center; gap:12px;
-  padding:0 16px; z-index:50; border-bottom:1px solid var(--border);
-  background:color-mix(in oklab,var(--bg-2) 80%, transparent);
-  -webkit-backdrop-filter:blur(12px) saturate(1.1); backdrop-filter:blur(12px) saturate(1.1)}
-.brand{display:flex; align-items:center; gap:11px; font-weight:900; letter-spacing:.02em; color:var(--accent1)}
-.brand .marker{width:22px; height:22px; border-radius:6px;
-  background:linear-gradient(135deg,var(--canyon),var(--canyon-deep)); position:relative; flex:none;
-  box-shadow:inset 0 0 0 2px rgba(255,255,255,.18), 0 2px 6px rgba(0,0,0,.25)}
-.brand .marker::after{content:""; position:absolute; inset:5px 4px auto 4px; height:3px; border-radius:2px;
-  background:rgba(255,255,255,.55); box-shadow:0 5px 0 rgba(255,255,255,.32), 0 10px 0 rgba(255,255,255,.18)}
-.brand b{font-weight:900}
-.brand .sub{font-weight:700; font-size:11px; letter-spacing:.14em; color:var(--muted); text-transform:uppercase}
-.pill-internal{font-size:10px; font-weight:900; letter-spacing:.12em; text-transform:uppercase;
-  color:#fff; background:linear-gradient(135deg,var(--canyon),var(--canyon-deep));
-  padding:3px 8px; border-radius:6px; box-shadow:0 2px 8px rgba(110,46,26,.4)}
-.tabs{display:flex; gap:4px; margin-left:8px}
-.tab{border:1px solid transparent; background:transparent; color:var(--muted); border-radius:10px;
-  padding:8px 12px; font-weight:800; cursor:pointer; transition:.15s}
-.tab:hover{color:var(--fg); background:color-mix(in oklab,var(--term) 50%, transparent)}
-.tab[aria-current="page"]{color:var(--accent1); background:color-mix(in oklab,var(--term) 70%, transparent);
-  border-color:var(--border); box-shadow:0 2px 10px rgba(0,0,0,.06)}
+/* NAV */
+.nav{position:fixed; inset:0 0 auto 0; height:62px; display:flex; align-items:center; gap:12px; padding:0 16px; z-index:50;
+  border-bottom:1px solid var(--border); background:color-mix(in oklab,var(--bg-2) 84%, transparent);
+  -webkit-backdrop-filter:blur(14px) saturate(1.1); backdrop-filter:blur(14px) saturate(1.1)}
+.brand{display:flex; align-items:center; gap:11px; min-width:0}
+.brand .marker{width:34px; height:34px; border-radius:9px; flex:none; position:relative;
+  background:linear-gradient(135deg,var(--dnc-bright),var(--dnc-deep)); box-shadow:inset 0 0 0 2px rgba(255,255,255,.22), 0 3px 10px rgba(15,94,48,.4)}
+.brand .marker::after{content:""; position:absolute; left:6px; right:6px; top:11px; height:3px; border-radius:2px;
+  background:rgba(255,255,255,.7); box-shadow:0 6px 0 rgba(255,255,255,.4), 0 12px 0 rgba(255,255,255,.22)}
+.brand .bt{display:flex; flex-direction:column; line-height:1.05; min-width:0}
+.brand .bt b{font-weight:900; letter-spacing:.01em; color:var(--fg); font-size:17px}
+.brand .sub{font-weight:800; font-size:9.5px; letter-spacing:.16em; color:var(--dnc); text-transform:uppercase}
+.pill-internal{font-size:10px; font-weight:900; letter-spacing:.1em; text-transform:uppercase; color:#fff;
+  background:linear-gradient(135deg,var(--dnc),var(--dnc-deep)); padding:3px 8px; border-radius:6px; flex:none}
+.tabs{display:flex; gap:3px; margin-left:6px; overflow-x:auto; scrollbar-width:none; flex:1}
+.tabs::-webkit-scrollbar{display:none}
+.tab{border:1px solid transparent; background:transparent; color:var(--muted); border-radius:10px; padding:8px 12px;
+  font-weight:800; cursor:pointer; transition:.15s; white-space:nowrap}
+.tab:hover{color:var(--fg); background:color-mix(in oklab,var(--term) 55%, transparent)}
+.tab[aria-current="page"]{color:var(--accent1); background:color-mix(in oklab,var(--term) 75%, transparent); border-color:var(--border)}
 .spacer{flex:1}
-.btn{appearance:none; border:1px solid var(--border); color:var(--fg); border-radius:11px; padding:8px 12px;
-  font-weight:800; cursor:pointer; background:color-mix(in oklab,var(--term) 78%, transparent); transition:.15s}
-.btn:hover{border-color:color-mix(in oklab,var(--accent1) 45%, var(--border)); transform:translateY(-1px)}
-.btn.primary{color:#fff; border-color:transparent; background:linear-gradient(135deg,var(--canyon),var(--canyon-deep))}
-.btn.sm{padding:5px 9px; font-size:12.5px; border-radius:9px}
+.navbtns{display:flex; gap:8px; flex:none}
+.btn{appearance:none; border:1px solid var(--border); color:var(--fg); border-radius:11px; padding:8px 12px; font-weight:800;
+  cursor:pointer; background:color-mix(in oklab,var(--term) 80%, transparent); transition:.15s; white-space:nowrap}
+.btn:hover{border-color:color-mix(in oklab,var(--accent1) 50%, var(--border)); transform:translateY(-1px)}
+.btn.primary{color:#fff; border-color:transparent; background:linear-gradient(135deg,var(--dnc),var(--dnc-deep))}
+.btn.sm{padding:6px 10px; font-size:12.5px; border-radius:9px}
 
-/* conditions strip — live, at a glance */
+/* conditions strip */
 .strip{position:fixed; top:62px; left:0; right:0; z-index:40; display:flex; gap:18px; align-items:center;
   padding:7px 18px; font-size:12.5px; color:var(--muted); border-bottom:1px solid var(--border);
-  background:color-mix(in oklab,var(--bg-2) 70%, transparent); backdrop-filter:blur(10px); overflow-x:auto; white-space:nowrap}
+  background:color-mix(in oklab,var(--bg-2) 78%, transparent); backdrop-filter:blur(12px); overflow-x:auto; white-space:nowrap; scrollbar-width:none}
+.strip::-webkit-scrollbar{display:none}
 .strip b{color:var(--fg)} .strip .live{color:var(--ok); font-weight:900}
-.strip .dotpulse{width:7px; height:7px; border-radius:50%; background:var(--ok); display:inline-block; margin-right:5px;
+.dotpulse{width:7px; height:7px; border-radius:50%; background:var(--ok); display:inline-block; margin-right:5px;
   box-shadow:0 0 0 0 color-mix(in oklab,var(--ok) 70%, transparent); animation:pulse 2.2s infinite}
-@keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in oklab,var(--ok) 60%, transparent)}70%{box-shadow:0 0 0 7px transparent}100%{box-shadow:0 0 0 0 transparent}}
+@keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in oklab,var(--ok) 55%, transparent)}70%{box-shadow:0 0 0 8px transparent}100%{box-shadow:0 0 0 0 transparent}}
 
 /* LAYOUT */
-.main{display:grid; grid-template-columns:1fr; gap:16px; padding:118px 16px 90px; max-width:1180px; margin:0 auto; position:relative; z-index:1}
-@media(min-width:980px){ .home{grid-template-columns:290px 1fr 322px} }
+.main{display:grid; grid-template-columns:1fr; gap:16px; padding:120px 16px 92px; max-width:1180px; margin:0 auto; position:relative; z-index:1}
+@media(min-width:980px){ .home{grid-template-columns:290px 1fr 330px} }
 .view{display:none} .view.active{display:grid; gap:16px}
 
-/* PANELS / CARDS */
-.panel{border:1px solid var(--border); border-radius:16px; background:var(--term); box-shadow:var(--card-shadow)}
+/* PANELS */
+.panel{border:1px solid var(--border); border-radius:16px; background:color-mix(in oklab,var(--term) 96%, transparent); box-shadow:var(--card-shadow); backdrop-filter:blur(3px)}
 .panel>header{display:flex; align-items:center; gap:10px; padding:13px 15px; border-bottom:1px solid var(--border);
-  font-weight:900; letter-spacing:.03em; color:var(--accent2)}
+  font-weight:900; letter-spacing:.03em; color:var(--accent1); flex-wrap:wrap}
 .panel .body{padding:14px 15px}
-.badge{display:inline-flex; align-items:center; gap:7px; font-size:11px; font-weight:900; letter-spacing:.08em;
-  padding:5px 9px; border-radius:8px; border:1px solid var(--border); color:var(--muted);
-  background:color-mix(in oklab,var(--sand) 35%, transparent)}
-[data-theme="night"] .badge{background:rgba(255,255,255,.05)}
-.spark{width:9px; height:9px; border-radius:50%; background:radial-gradient(circle at 30% 30%,var(--accent1),var(--accent3))}
+.badge{display:inline-flex; align-items:center; gap:7px; font-size:11px; font-weight:900; letter-spacing:.07em; padding:5px 9px;
+  border-radius:8px; border:1px solid var(--border); color:var(--muted); background:color-mix(in oklab,var(--dnc) 12%, transparent)}
+.spark{width:9px; height:9px; border-radius:50%; background:radial-gradient(circle at 30% 30%,var(--dnc-bright),var(--dnc-deep))}
 .demo-pill{font-size:9.5px; font-weight:900; letter-spacing:.1em; text-transform:uppercase; color:var(--warn);
   border:1px dashed color-mix(in oklab,var(--warn) 55%, var(--border)); padding:2px 6px; border-radius:6px}
 
-/* console / profile */
 .who{display:flex; gap:12px; align-items:center; margin-bottom:6px}
-.who .avi{width:48px; height:48px; border-radius:12px; font-weight:900; color:#fff; display:grid; place-items:center; font-size:18px}
+.who .avi{width:48px; height:48px; border-radius:12px; font-weight:900; color:#fff; display:grid; place-items:center; font-size:18px; flex:none}
 .who .name{font-weight:900; font-size:16px} .who .role{color:var(--muted); font-size:12.5px}
 .kv{display:flex; justify-content:space-between; gap:8px; padding:8px 0; border-bottom:1px dashed var(--border); font-size:13px}
 .kv:last-child{border-bottom:0}
 .tag{display:inline-flex; align-items:center; gap:6px; font-size:12px; padding:5px 10px; border-radius:999px;
-  border:1px solid var(--border); background:color-mix(in oklab,var(--sand) 38%, transparent)}
-[data-theme="night"] .tag{background:rgba(255,255,255,.05)}
+  border:1px solid var(--border); background:color-mix(in oklab,var(--dnc) 10%, transparent)}
 .tag.on{background:color-mix(in oklab,var(--ok) 22%, transparent); border-color:color-mix(in oklab,var(--ok) 45%, var(--border)); color:var(--fg)}
 .chips{display:flex; flex-wrap:wrap; gap:7px; margin-top:10px}
 .small{font-size:12px; color:var(--muted)}
@@ -112,128 +116,142 @@ body{
 .stat3 div{border:1px solid var(--border); border-radius:10px; padding:8px 4px}
 .stat3 b{display:block; font-size:18px; color:var(--accent1)}
 
-/* COMPOSER */
 .composer{display:grid; gap:10px}
 .composer textarea{width:100%; min-height:78px; resize:vertical; border:1px solid var(--border); color:var(--fg);
-  background:color-mix(in oklab,var(--paper) 65%, transparent); padding:11px 13px; border-radius:12px; outline:none; font:inherit}
-.composer textarea:focus{border-color:color-mix(in oklab,var(--accent1) 50%, var(--border))}
+  background:color-mix(in oklab,var(--paper) 60%, transparent); padding:11px 13px; border-radius:12px; outline:none; font:inherit}
+[data-theme="night"] .composer textarea{background:rgba(255,255,255,.04)}
+.composer textarea:focus{border-color:color-mix(in oklab,var(--dnc) 55%, var(--border))}
 .composer .row{display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap}
 .pill{display:inline-flex; align-items:center; gap:6px; padding:6px 11px; border:1px solid var(--border); border-radius:999px;
-  background:color-mix(in oklab,var(--sand) 38%, transparent); font-size:12.5px; cursor:pointer; transition:.12s}
-.pill:hover{border-color:color-mix(in oklab,var(--accent2) 50%, var(--border)); transform:translateY(-1px)}
-[data-theme="night"] .pill{background:rgba(255,255,255,.05)}
+  background:color-mix(in oklab,var(--dnc) 9%, transparent); font-size:12.5px; cursor:pointer; transition:.12s}
+.pill:hover{border-color:color-mix(in oklab,var(--dnc) 50%, var(--border)); transform:translateY(-1px)}
 
-/* FEED */
 .post{display:grid; grid-template-columns:46px 1fr; gap:12px; padding:14px 15px; border-top:1px solid var(--border)}
 .post:first-of-type{border-top:0}
 .avi{width:46px; height:46px; border-radius:11px; display:grid; place-items:center; color:#fff; font-weight:900; font-size:16px; flex:none}
-.handle{font-weight:900} .handle .div{font-weight:700; color:var(--accent1); font-size:11.5px; margin-left:6px}
+.handle{font-weight:900} .handle .div{font-weight:700; color:var(--dnc); font-size:11.5px; margin-left:6px}
 .meta{color:var(--muted); font-size:12px; font-weight:600}
 .post .text{white-space:pre-wrap; word-break:break-word; margin-top:2px}
 .post .media{margin-top:10px; border:1px solid var(--border); border-radius:12px; overflow:hidden; aspect-ratio:16/9}
-.actions{display:flex; gap:6px; margin-top:9px}
-.icon-btn{border:1px solid transparent; background:transparent; color:var(--muted); border-radius:9px; padding:5px 9px;
-  font-weight:800; font-size:12.5px; cursor:pointer; transition:.12s; display:inline-flex; gap:6px; align-items:center}
-.icon-btn:hover{background:color-mix(in oklab,var(--sand) 40%, transparent); color:var(--fg)}
+.actions{display:flex; gap:4px; margin-top:9px; flex-wrap:wrap}
+.icon-btn{border:1px solid transparent; background:transparent; color:var(--muted); border-radius:9px; padding:6px 9px;
+  font-weight:800; font-size:12.5px; cursor:pointer; transition:.12s; display:inline-flex; gap:6px; align-items:center; min-height:36px}
+.icon-btn:hover{background:color-mix(in oklab,var(--dnc) 12%, transparent); color:var(--fg)}
 .icon-btn.liked{color:var(--canyon)}
 
-/* widgets */
-.widget{padding:13px 15px; border-top:1px solid var(--border)}
-.widget:first-child{border-top:0}
-.wtitle{display:flex; align-items:center; justify-content:space-between; font-size:11px; font-weight:900;
-  letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin-bottom:8px}
+.widget{padding:13px 15px; border-top:1px solid var(--border)} .widget:first-child{border-top:0}
+.wtitle{display:flex; align-items:center; justify-content:space-between; font-size:11px; font-weight:900; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--muted); margin-bottom:8px}
 .alert{font-size:13px; padding:8px 10px; border-radius:9px; border:1px solid color-mix(in oklab,var(--warn) 40%, var(--border));
   background:color-mix(in oklab,var(--warn) 12%, transparent); margin-bottom:6px}
 
-/* grids for crews / marketplace / shifts */
-.cardgrid{display:grid; grid-template-columns:repeat(auto-fill,minmax(248px,1fr)); gap:14px}
-.tile{border:1px solid var(--border); border-radius:14px; background:var(--term); box-shadow:var(--card-shadow); padding:15px; transition:.15s}
-.tile:hover{transform:translateY(-2px); border-color:color-mix(in oklab,var(--accent1) 35%, var(--border))}
+.cardgrid{display:grid; grid-template-columns:repeat(auto-fill,minmax(232px,1fr)); gap:14px}
+.tile{border:1px solid var(--border); border-radius:14px; background:color-mix(in oklab,var(--term) 96%, transparent); box-shadow:var(--card-shadow); padding:15px; transition:.15s}
+.tile:hover{transform:translateY(-2px); border-color:color-mix(in oklab,var(--dnc) 38%, var(--border))}
 .tile h3{margin:0 0 4px; font-size:16px}
-.tile .crewicon{width:40px; height:40px; border-radius:11px; display:grid; place-items:center; color:#fff; font-size:20px; margin-bottom:10px}
+.tile .crewicon{width:42px; height:42px; border-radius:11px; display:grid; place-items:center; color:#fff; font-size:21px; margin-bottom:10px}
 .shiftrow{display:flex; align-items:center; gap:14px; padding:13px 15px; border-top:1px solid var(--border); flex-wrap:wrap}
 .shiftrow:first-of-type{border-top:0}
-.shiftrow .when{min-width:120px; font-weight:900}
-.shiftrow .what{flex:1; min-width:170px} .shiftrow .what .small{margin-top:2px}
+.shiftrow .when{min-width:118px; font-weight:900}
+.shiftrow .what{flex:1; min-width:160px}
 .price{font-weight:900; color:var(--accent2)}
 
-/* command palette */
-.palette{position:fixed; inset:0; display:grid; place-items:start center; padding-top:14vh;
-  background:rgba(10,12,10,.4); backdrop-filter:blur(8px); z-index:80; opacity:0; pointer-events:none; transition:.15s}
+/* transit */
+.routebar{display:flex; align-items:center; gap:11px; padding:11px 13px; border:1px solid var(--border); border-radius:12px; margin-bottom:9px}
+.routebar .dotc{width:14px; height:14px; border-radius:50%; flex:none; box-shadow:0 0 0 3px color-mix(in oklab, currentColor 22%, transparent)}
+.routebar .rn{font-weight:900} .routebar .rt{flex:1}
+.gtimes{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:6px}
+.gtimes .col{border:1px solid var(--border); border-radius:12px; padding:11px 13px}
+.gtimes .t{display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px dashed var(--border); font-variant-numeric:tabular-nums}
+.gtimes .t:last-child{border-bottom:0}
+.dnc-strap{height:4px; border-radius:4px; background:linear-gradient(90deg,var(--dnc-bright),var(--dnc),var(--dnc-deep)); margin:-14px -15px 14px; border-radius:16px 16px 0 0}
+
+.palette{position:fixed; inset:0; display:grid; place-items:start center; padding-top:14vh; background:rgba(8,12,9,.45);
+  backdrop-filter:blur(8px); z-index:80; opacity:0; pointer-events:none; transition:.15s}
 .palette.open{opacity:1; pointer-events:auto}
 .palette .panel{width:min(720px,92vw)}
 .palette input{width:100%; padding:16px; border:0; outline:0; background:var(--term); color:var(--fg); font:inherit; font-size:16px; border-radius:16px 16px 0 0}
 .result{padding:12px 16px; border-top:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; cursor:pointer}
-.result:hover{background:color-mix(in oklab,var(--sand) 35%, transparent)}
-.kbd{display:inline-block; border:1px solid var(--border); border-radius:6px; padding:2px 6px; font-size:11.5px;
-  background:color-mix(in oklab,var(--paper) 60%, transparent)}
-[data-theme="night"] .kbd{background:rgba(255,255,255,.05)}
+.result:hover{background:color-mix(in oklab,var(--dnc) 12%, transparent)}
+.kbd{display:inline-block; border:1px solid var(--border); border-radius:6px; padding:2px 6px; font-size:11.5px; background:color-mix(in oklab,var(--paper) 55%, transparent)}
 
 .reveal{opacity:0; transform:translateY(10px); transition:opacity .5s ease, transform .5s ease}
 .reveal.in{opacity:1; transform:none}
-footer{text-align:center; color:var(--muted); padding:28px 12px 70px; font-size:12.5px}
-.fabs{position:fixed; right:14px; bottom:14px; display:grid; gap:10px; z-index:70}
-.fab{border:1px solid var(--border); background:color-mix(in oklab,var(--term) 85%, transparent); color:var(--fg);
-  border-radius:999px; padding:11px 14px; font-weight:800; cursor:pointer; box-shadow:var(--card-shadow)}
-@media(min-width:980px){ .fabs{display:none} }
+footer{text-align:center; color:var(--muted); padding:26px 14px 70px; font-size:12.5px; position:relative; z-index:1}
+footer b{color:var(--fg)}
+.fabs{position:fixed; right:14px; bottom:14px; display:none; gap:10px; z-index:70}
+.fab{border:1px solid var(--border); background:color-mix(in oklab,var(--term) 88%, transparent); color:var(--fg);
+  border-radius:999px; padding:12px 15px; font-weight:800; cursor:pointer; box-shadow:var(--card-shadow)}
+
+/* ===== RESPONSIVE — phone & tablet ===== */
+@media(max-width:980px){
+  .navbtns{display:none} .fabs{display:grid}
+}
+@media(max-width:720px){
+  .nav{height:56px; padding:0 11px; gap:9px}
+  .brand .bt .sub{display:none}
+  .brand .marker{width:30px; height:30px}
+  .pill-internal{display:none}
+  .strip{top:56px; gap:13px; padding:6px 12px; font-size:12px}
+  .main{padding:104px 11px 84px}
+  .cardgrid{grid-template-columns:1fr}
+  .gtimes{grid-template-columns:1fr}
+  h3{font-size:15.5px}
+}
+@media(max-width:380px){ .brand .bt b{font-size:15.5px} .tab{padding:7px 9px} }
 @media(prefers-reduced-motion:reduce){ *{animation:none!important; transition:none!important} }
 </style>
 </head>
 <body>
-<canvas id="bg" aria-hidden="true"></canvas>
+<div id="bg" aria-hidden="true"></div>
 <div id="bg-scrim" aria-hidden="true"></div>
 
 <nav class="nav" role="navigation" aria-label="Primary">
   <div class="brand">
     <span class="marker"></span>
-    <span><b>CanyonNet</b> <span class="sub">Internal Park Network</span></span>
+    <span class="bt"><b>CanyonNet</b><span class="sub">Grand Canyon South Rim</span></span>
     <span class="pill-internal">Internal</span>
   </div>
   <div class="tabs" role="tablist" id="tabs">
     <button class="tab" data-view="home" aria-current="page">Home</button>
     <button class="tab" data-view="explore">Explore</button>
     <button class="tab" data-view="crews">Crews</button>
+    <button class="tab" data-view="transit">Transit</button>
     <button class="tab" data-view="marketplace">Marketplace</button>
     <button class="tab" data-view="shifts">Shifts</button>
   </div>
-  <div class="spacer"></div>
-  <button id="btnTheme" class="btn sm" title="Toggle Day/Night (T)">☀︎ / ☾</button>
-  <button id="btnPalette" class="btn sm" title="Command Palette (⌘/Ctrl+K)">⌘K</button>
+  <div class="navbtns">
+    <button id="btnTheme" class="btn sm" title="Day/Night (T)">☀︎ / ☾</button>
+    <button id="btnPalette" class="btn sm" title="Command Palette (⌘/Ctrl+K)">⌘K</button>
+  </div>
 </nav>
 
 <div class="strip" id="strip" aria-label="Live conditions">
-  <span><span class="dotpulse"></span><span class="live">LIVE</span> conditions · Grand Canyon</span>
-  <span>South Rim <b id="sx">…</b></span>
+  <span><span class="dotpulse"></span><span class="live">LIVE</span> · South Rim</span>
+  <span>Weather <b id="sx">…</b></span>
   <span>Phantom Ranch <b id="px">…</b></span>
   <span>Alerts <b id="ax">…</b></span>
-  <span>Shuttle <b id="hx">Hermit Rd · running</b></span>
+  <span>Park buses <b style="color:var(--ok)">running</b></span>
+  <span>Groome → Flagstaff <b>10:15a · 3:30p · 6:30p</b></span>
   <span class="small" id="upd"></span>
 </div>
 
 <main class="main" id="app">
   <!-- ============ HOME ============ -->
   <div class="view home active" id="view-home">
-    <!-- LEFT: console -->
     <aside class="panel reveal">
-      <header><span class="badge"><span class="spark"></span> CONSOLE</span> You on the rim <span class="demo-pill" title="Sample profile">demo</span></header>
+      <header><span class="badge"><span class="spark"></span> CONSOLE</span> You on the rim <span class="demo-pill">demo</span></header>
       <div class="body">
-        <div class="who">
-          <div class="avi" id="meAvi"></div>
-          <div><div class="name" id="meName"></div><div class="role" id="meRole"></div></div>
-        </div>
-        <div class="kv"><span>Company</span><strong id="meCo"></strong></div>
+        <div class="who"><div class="avi" id="meAvi"></div><div><div class="name" id="meName"></div><div class="role" id="meRole"></div></div></div>
+        <div class="kv"><span>Employer</span><strong id="meCo"></strong></div>
+        <div class="kv"><span>Property</span><strong id="meProp"></strong></div>
         <div class="kv"><span>Area</span><strong id="meArea"></strong></div>
         <div class="kv"><span>Status</span><strong class="tag on" id="meStatus"></strong></div>
-        <div class="stat3">
-          <div><b id="stPosts">0</b><span class="small">posts</span></div>
-          <div><b id="stCrews">0</b><span class="small">crews</span></div>
-          <div><b id="stSwaps">0</b><span class="small">swaps</span></div>
-        </div>
+        <div class="stat3"><div><b id="stPosts">0</b><span class="small">posts</span></div><div><b id="stCrews">0</b><span class="small">crews</span></div><div><b id="stSwaps">0</b><span class="small">swaps</span></div></div>
         <div class="chips" id="meCrews"></div>
       </div>
     </aside>
 
-    <!-- CENTER: composer + feed -->
     <section style="display:grid; gap:16px">
       <article class="panel reveal">
         <header><span class="badge"><span class="spark"></span> POST</span> Share with the Canyon</header>
@@ -242,7 +260,6 @@ footer{text-align:center; color:var(--muted); padding:28px 12px 70px; font-size:
           <div class="row">
             <div style="display:flex; gap:8px; flex-wrap:wrap">
               <span class="pill" data-tag="📷 Photo">📷 Photo</span>
-              <span class="pill" data-tag="🎥 Video">🎥 Video</span>
               <span class="pill" data-tag="📍 Check-in">📍 Check-in</span>
               <span class="pill" data-tag="🔁 Shift Swap">🔁 Shift Swap</span>
             </div>
@@ -250,14 +267,12 @@ footer{text-align:center; color:var(--muted); padding:28px 12px 70px; font-size:
           </div>
         </div>
       </article>
-
       <article class="panel reveal">
         <header><span class="badge"><span class="spark"></span> FEED</span> South Rim — Live feed <span class="demo-pill">sample posts</span></header>
         <div id="feed"></div>
       </article>
     </section>
 
-    <!-- RIGHT: ops -->
     <aside class="panel reveal">
       <header><span class="badge"><span class="spark"></span> OPS</span> Conditions &amp; Board</header>
       <div class="widget">
@@ -271,10 +286,11 @@ footer{text-align:center; color:var(--muted); padding:28px 12px 70px; font-size:
         <div class="small" id="wxUpdated"></div>
       </div>
       <div class="widget">
-        <div class="wtitle">Shuttle</div>
-        <div class="kv"><span>Hermit Road</span><strong style="color:var(--ok)">Running</strong></div>
-        <div class="kv"><span>Kaibab/Rim</span><strong style="color:var(--ok)">Running</strong></div>
-        <div class="kv"><span>Tusayan</span><strong style="color:var(--warn)">Seasonal</strong></div>
+        <div class="wtitle">Buses &amp; Transit</div>
+        <div class="kv"><span>Park buses (NPS)</span><strong style="color:var(--ok)">4 routes</strong></div>
+        <div class="kv"><span>DNC employee shuttle</span><strong class="small">schedule pending</strong></div>
+        <div class="kv"><span>Groome → Flagstaff</span><strong>3×/day</strong></div>
+        <button class="btn sm" style="margin-top:10px; width:100%" data-goto="transit">Open transit board →</button>
       </div>
       <div class="widget">
         <div class="wtitle">Jobs &amp; Swaps <span class="small">demo</span></div>
@@ -288,11 +304,11 @@ footer{text-align:center; color:var(--muted); padding:28px 12px 70px; font-size:
   <!-- ============ EXPLORE ============ -->
   <div class="view" id="view-explore">
     <article class="panel reveal">
-      <header><span class="badge"><span class="spark"></span> EXPLORE</span> Across the park <span class="demo-pill">demo</span></header>
+      <header><span class="badge"><span class="spark"></span> EXPLORE</span> Across the South Rim <span class="demo-pill">demo</span></header>
       <div class="body">
         <div class="wtitle">Trending on the rim</div>
         <div class="chips" id="trending"></div>
-        <div class="wtitle" style="margin-top:16px">Divisions</div>
+        <div class="wtitle" style="margin-top:16px">Divisions &amp; properties</div>
         <div class="cardgrid" id="exploreCrews"></div>
       </div>
     </article>
@@ -301,8 +317,42 @@ footer{text-align:center; color:var(--muted); padding:28px 12px 70px; font-size:
   <!-- ============ CREWS ============ -->
   <div class="view" id="view-crews">
     <article class="panel reveal">
-      <header><span class="badge"><span class="spark"></span> CREWS</span> Your divisions &amp; teams <span class="demo-pill">demo</span></header>
+      <header><span class="badge"><span class="spark"></span> CREWS</span> Your divisions &amp; properties <span class="demo-pill">demo</span></header>
       <div class="body"><div class="cardgrid" id="crews"></div></div>
+    </article>
+  </div>
+
+  <!-- ============ TRANSIT ============ -->
+  <div class="view" id="view-transit">
+    <!-- Park buses (NPS, free) -->
+    <article class="panel reveal">
+      <header><span class="badge"><span class="spark"></span> PARK BUSES</span> NPS shuttle routes · free <span class="demo-pill">schedule via NPS</span></header>
+      <div class="body">
+        <p class="small" style="margin-top:0">The free National Park Service shuttle buses. Color-coded by route — this is the public park system, <b>separate</b> from the Delaware North employee shuttle below.</p>
+        <div id="parkBuses"></div>
+      </div>
+    </article>
+    <!-- DNC employee shuttle -->
+    <article class="panel reveal">
+      <header><span class="badge"><span class="spark"></span> DNC SHUTTLE</span> Delaware North employee shuttle <span class="demo-pill">awaiting DNC schedule</span></header>
+      <div class="body">
+        <div class="dnc-strap"></div>
+        <p class="small" style="margin-top:0">The internal Delaware North staff shuttle — housing ↔ work locations. <b>Distinct from the NPS park buses.</b> Drop the real DNC route times in here and they’ll render the same way.</p>
+        <div id="dncShuttle"></div>
+      </div>
+    </article>
+    <!-- Groome -->
+    <article class="panel reveal">
+      <header><span class="badge"><span class="spark"></span> GROOME</span> Groome Transportation → Flagstaff <span class="demo-pill">live web schedule</span></header>
+      <div class="body">
+        <p class="small" style="margin-top:0">Door-to-door van between the Grand Canyon (Tusayan IMAX) and Flagstaff (Amtrak / airport). Three round-trips daily · ~1.5 hr · $49–59 adult (<b>park employees: call for pricing</b>) · <a href="tel:9283508466" style="color:var(--dnc)">928-350-8466</a>.</p>
+        <div class="gtimes">
+          <div class="col"><div class="wtitle">Grand Canyon → Flagstaff</div><div id="gToFlag"></div></div>
+          <div class="col"><div class="wtitle">Flagstaff → Grand Canyon</div><div id="gToGC"></div></div>
+        </div>
+        <a class="btn sm primary" style="margin-top:12px; display:inline-block; text-decoration:none" href="https://groometransportation.com/grand-canyon/" target="_blank" rel="noopener">Book on groometransportation.com →</a>
+        <div class="small" style="margin-top:6px">Reservations encouraged — 24 hrs notice recommended.</div>
+      </div>
     </article>
   </div>
 
@@ -324,7 +374,8 @@ footer{text-align:center; color:var(--muted); padding:28px 12px 70px; font-size:
 </main>
 
 <footer>
-  CanyonNet · internal park network — <b>demo build</b>. Live weather &amp; NWS alerts are real (no key, public APIs). Everything else is sample content, ready to wire to your systems.
+  <b>CanyonNet</b> · internal park network for <b>Grand Canyon South Rim</b> — operated by <b>Delaware North</b>, an authorized concessioner of the National Park Service.
+  <br>Demo build · live weather &amp; NWS alerts are real (public APIs, no key); everything else is sample content, ready to wire to DNC systems.
   Toggle <span class="kbd">T</span> day/night · <span class="kbd">⌘/Ctrl K</span> palette.
 </footer>
 
@@ -334,321 +385,169 @@ footer{text-align:center; color:var(--muted); padding:28px 12px 70px; font-size:
 </div>
 
 <div class="palette" id="palette" aria-hidden="true">
-  <div class="panel">
-    <input id="palInput" placeholder="Jump to: home, explore, crews, marketplace, shifts · night/day…" aria-label="Command" />
-    <div id="palResults"></div>
-  </div>
+  <div class="panel"><input id="palInput" placeholder="Jump to: home, transit, crews, shifts, marketplace · night/day…" aria-label="Command" /><div id="palResults"></div></div>
 </div>
 
 <script>
-/* =========================================================
-   1. WebGL canyon background — layered ridge silhouettes
-      receding into haze, soft sun, drifting dust.
-      Day/night aware, subtle mouse parallax, perf-capped.
-   ========================================================= */
-(function(){
-  const cv = document.getElementById('bg');
-  const gl = cv.getContext('webgl', {antialias:false, alpha:false, powerPreference:'low-power'});
-  if(!gl){ document.body.style.background='linear-gradient(180deg,var(--bg),var(--bg-2))'; return; }
-
-  const vsrc = `attribute vec2 p; void main(){ gl_Position = vec4(p,0.,1.); }`;
-  const fsrc = `
-  precision highp float;
-  uniform vec2 res; uniform float t; uniform float night; uniform vec2 mouse;
-
-  float hash(float n){ return fract(sin(n)*43758.5453123); }
-  float vnoise(float x){ float i=floor(x), f=fract(x); float u=f*f*(3.-2.*f);
-    return mix(hash(i), hash(i+1.), u); }
-  float fbm(float x){ float s=0., a=.5; for(int i=0;i<5;i++){ s+=a*vnoise(x); x*=2.02; a*=.5; } return s; }
-
-  void main(){
-    vec2 uv = gl_FragCoord.xy/res;            // 0..1, y up
-    float aspect = res.x/res.y;
-
-    // ---- sky gradient (day vs night) ----
-    vec3 dayTop = vec3(0.62,0.78,0.95), dayHaze = vec3(0.93,0.86,0.74);
-    vec3 nitTop = vec3(0.03,0.05,0.08), nitHaze = vec3(0.10,0.12,0.14);
-    vec3 top  = mix(dayTop, nitTop, night);
-    vec3 haze = mix(dayHaze, nitHaze, night);
-    vec3 col = mix(haze, top, smoothstep(0.18, 1.0, uv.y));
-
-    // ---- sun / moon glow ----
-    vec2 sun = vec2(0.78 + mouse.x*0.02, 0.82);
-    float d = distance(vec2(uv.x*aspect, uv.y), vec2(sun.x*aspect, sun.y));
-    vec3 sunCol = mix(vec3(1.0,0.96,0.86), vec3(0.7,0.78,0.95), night);
-    col += sunCol * (0.35*exp(-d*6.0) + 0.12*exp(-d*1.6)) * (1.0-0.4*night);
-
-    // ---- layered canyon ridges, far -> near ----
-    // each layer: a noisy horizon line; below it = strata color, hazed by depth.
-    const int N = 6;
-    for(int i=0;i<N;i++){
-      float fi = float(i);
-      float depth = fi/float(N-1);                 // 0 far .. 1 near
-      float par = (mouse.x-0.5) * (0.012 + depth*0.05); // parallax
-      float drift = t*0.006*(0.3+depth);
-      float freq = 2.2 + fi*1.7;
-      float base = 0.30 + 0.085*fi;                // higher layers sit lower
-      float h = base + (0.10 - depth*0.02) * (fbm((uv.x+par+drift)*freq + fi*13.7) - 0.5)*2.0;
-      float edge = smoothstep(h+0.004, h-0.004, uv.y); // 1 below the ridge
-      // strata palette from rim (sandy) down to deep canyon
-      vec3 near = mix(vec3(0.63,0.40,0.24), vec3(0.34,0.18,0.11), depth);
-      vec3 far  = mix(vec3(0.55,0.45,0.40), vec3(0.20,0.13,0.10), depth);
-      vec3 rock = mix(far, near, depth);
-      rock = mix(rock, rock*vec3(0.5,0.55,0.6), night*0.7);  // cool the rock at night
-      // depth haze: far layers blend toward the sky haze
-      rock = mix(haze*mix(1.0,0.5,night), rock, 0.30+0.70*depth);
-      col = mix(col, rock, edge);
-    }
-
-    // ---- drifting dust / grain ----
-    float g = vnoise((uv.x*res.x + floor(t*30.0))*0.7) * vnoise((uv.y*res.y)*1.3);
-    col += (g-0.5)*0.018;
-
-    // gentle vignette
-    col *= 1.0 - 0.18*pow(distance(uv, vec2(0.5))*1.25, 2.0);
-
-    gl_FragColor = vec4(col, 1.0);
-  }`;
-
-  function sh(type, src){ const s=gl.createShader(type); gl.shaderSource(s,src); gl.compileShader(s);
-    if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)) console.warn(gl.getShaderInfoLog(s)); return s; }
-  const prog = gl.createProgram();
-  gl.attachShader(prog, sh(gl.VERTEX_SHADER, vsrc));
-  gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, fsrc));
-  gl.linkProgram(prog); gl.useProgram(prog);
-  const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 3,-1, -1,3]), gl.STATIC_DRAW);
-  const loc = gl.getAttribLocation(prog,'p'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
-  const uRes=gl.getUniformLocation(prog,'res'), uT=gl.getUniformLocation(prog,'t'),
-        uNight=gl.getUniformLocation(prog,'night'), uMouse=gl.getUniformLocation(prog,'mouse');
-
-  let mx=0.5, my=0.5, mtx=0.5;
-  addEventListener('mousemove', e=>{ mtx = e.clientX/innerWidth; }, {passive:true});
-  let dpr=Math.min(devicePixelRatio||1, 1.6);
-  function resize(){ cv.width=Math.floor(innerWidth*dpr); cv.height=Math.floor(innerHeight*dpr);
-    gl.viewport(0,0,cv.width,cv.height); }
-  addEventListener('resize', resize); resize();
-
-  let running=true; document.addEventListener('visibilitychange', ()=>{ running=!document.hidden; if(running) loop(0); });
-  const start=performance.now();
-  function loop(now){
-    if(!running) return;
-    mx += (mtx-mx)*0.04;                              // ease parallax
-    const night = document.documentElement.getAttribute('data-theme')==='night' ? 1.0 : 0.0;
-    // smooth night transition
-    loop._n = (loop._n===undefined)? night : loop._n + (night-loop._n)*0.06;
-    gl.uniform2f(uRes, cv.width, cv.height);
-    gl.uniform1f(uT, (now-start)/1000);
-    gl.uniform1f(uNight, loop._n);
-    gl.uniform2f(uMouse, mx, my);
-    gl.drawArrays(gl.TRIANGLES,0,3);
-    requestAnimationFrame(loop);
-  }
-  requestAnimationFrame(loop);
+/* ---------- background parallax (subtle, on top of the photo) ---------- */
+(function(){ const bg=document.getElementById('bg'); let tx=0,ty=0,cx=0,cy=0;
+  addEventListener('mousemove',e=>{ tx=(e.clientX/innerWidth-.5); ty=(e.clientY/innerHeight-.5); },{passive:true});
+  (function loop(){ cx+=(tx-cx)*.05; cy+=(ty-cy)*.05; bg.style.setProperty('--px',(cx*-14)+'px'); bg.style.setProperty('--py',(cy*-10)+'px');
+    bg.style.translate=(cx*-14)+'px '+(cy*-10)+'px'; requestAnimationFrame(loop); })();
 })();
 
-/* =========================================================
-   2. Demo data  (sample only — wire to real systems later)
-   ========================================================= */
-const ME = { name:"Dev R.", initials:"DR", role:"Lodging Host · El Tovar",
-  company:"Delaware North", area:"South Rim", status:"On shift",
-  color:"linear-gradient(135deg,#a04b2a,#6d2e1a)", crews:["Lodging","Food & Beverage"] };
-
-const COLORS = ["#a04b2a","#2f4f3a","#3b6ba5","#7a5230","#566f3f","#7a3b56","#3f6f6a"];
-let POSTS = [
-  {h:"trailcrew_mara", n:"Mara K.", div:"Trails", c:0, t:"6m",
-    x:"Bright Angel below Indian Garden is icy this morning — microspikes if you're headed down. ☀️ should clear it by 10.", l:24, r:5, media:0},
-  {h:"shuttle_dispatch", n:"Ops Note", div:"Transport", c:1, t:"18m",
-    x:"Hermit Road shuttle resuming after the 7:40 hold. Kaibab/Rim on schedule, Tusayan route running seasonal hours.", l:12, r:9, media:1},
-  {h:"kitchen_lou", n:"Lou P.", div:"Food & Bev", c:3, t:"42m",
-    x:"El Tovar dinner covers heavy tonight — anyone free to pick up a 4p–close? Posted it on the swap board. 🙏", l:8, r:2, media:0},
-  {h:"retail_jen", n:"Jen A.", div:"Retail", c:2, t:"1h",
-    x:"Lost & found: set of keys with a blue carabiner at Verkamp's. Come claim 'em before end of day.", l:15, r:1, media:0},
-  {h:"ranger_pa", n:"Ranger Pa", div:"NPS", c:4, t:"2h",
-    x:"Condor #54 spotted soaring near Mather Point this morning. Give them room — keep your distance and don't feed wildlife.", l:61, r:22, media:1},
-  {h:"newhire_sky", n:"Sky T.", div:"Guest Svcs", c:5, t:"3h",
-    x:"First week on the rim, done. This view still doesn't feel real. 🌄 Thanks to the Lodging crew for the warm welcome.", l:47, r:6, media:0},
+/* ---------- demo data (DNC Grand Canyon South Rim — sample) ---------- */
+const ME={name:"Dev R.",initials:"DR",role:"Front Desk · Yavapai Lodge",company:"Delaware North",
+  property:"Yavapai Lodge",area:"South Rim",status:"On shift",color:"linear-gradient(135deg,#1a924b,#0f5e30)",crews:["Lodging","Guest Services"]};
+const COLORS=["#1a924b","#0f5e30","#0070bc","#a04b2a","#7d4ea3","#02757d","#b08900"];
+let POSTS=[
+ {h:"yavapai_front",n:"Mara K.",div:"Lodging",c:0,t:"6m",x:"Yavapai Lodge lobby is slammed with the morning check-outs — extra hands at the desk would be clutch. ☕",l:18,r:3,media:0},
+ {h:"market_deli",n:"Ops Note",div:"Food & Bev",c:3,t:"22m",x:"Canyon Village Market & Deli grill is back up after the gas line check. Lunch rush should run normal.",l:11,r:2,media:1},
+ {h:"yavapai_tavern",n:"Lou P.",div:"Food & Bev",c:1,t:"41m",x:"Yavapai Tavern dinner covers heavy tonight — anyone free to pick up a 4p–close? Posted it on the swap board. 🙏",l:9,r:4,media:0},
+ {h:"gc_outfitters",n:"Jen A.",div:"Retail",c:2,t:"1h",x:"Grand Canyon Outfitters got the new trekking-pole restock in. Also: lost & found set of keys w/ a blue carabiner.",l:14,r:1,media:0},
+ {h:"trailer_village",n:"Sam D.",div:"Trailer Village",c:5,t:"2h",x:"Trailer Village RV check-ins moved to the kiosk while we repaint the office — signage is up. 🛠️",l:7,r:0,media:0},
+ {h:"newhire_sky",n:"Sky T.",div:"Guest Svcs",c:4,t:"3h",x:"First week with Delaware North on the South Rim — done. This view still doesn't feel real. 🌄 Thanks to the Yavapai crew.",l:52,r:6,media:0},
 ];
-
-const CREWS = [
-  {n:"Lodging & Front Desk", i:"🏨", m:128, c:0, d:"El Tovar · Bright Angel · Maswik · Yavapai"},
-  {n:"Food & Beverage", i:"🍽️", m:163, c:1, d:"Dining rooms, cafés, delis & catering"},
-  {n:"Trails & Maintenance", i:"⛏️", m:54, c:2, d:"Rim trails, facilities & grounds"},
-  {n:"Shuttle & Transport", i:"🚌", m:39, c:3, d:"Hermit · Kaibab/Rim · Village · Tusayan"},
-  {n:"Retail & Gifts", i:"🛍️", m:71, c:4, d:"Verkamp's, gift shops & galleries"},
-  {n:"Guest Services", i:"🛎️", m:96, c:5, d:"Concierge, tours & the front line"},
-  {n:"Housekeeping", i:"🧺", m:142, c:6, d:"Rooms, public spaces & laundry"},
+const CREWS=[
+ {n:"Lodging — Yavapai Lodge",i:"🏨",m:124,c:0,d:"Front desk, reservations & the lodge floor"},
+ {n:"Food & Beverage",i:"🍽️",m:168,c:1,d:"Canyon Village Market & Deli · Yavapai Tavern, Café & Dining Hall · Desert View"},
+ {n:"Retail & General Stores",i:"🛍️",m:73,c:2,d:"Grand Canyon Outfitters · Yavapai Gift Shop · Tusayan General Store"},
+ {n:"Trailer Village RV Park",i:"🚐",m:31,c:5,d:"RV check-in, sites & grounds"},
+ {n:"Guest Services & Tours",i:"🛎️",m:88,c:4,d:"Concierge, tours, eBike & activities"},
+ {n:"Transportation",i:"🚌",m:42,c:6,d:"Employee shuttle & logistics"},
+ {n:"Housekeeping",i:"🧺",m:151,c:3,d:"Rooms, public spaces & laundry"},
+ {n:"The Squire & Tusayan",i:"🏕️",m:96,c:2,d:"The Squire at Grand Canyon · Tusayan operations"},
 ];
-
-const MARKET = [
-  {t:"Dorm room swap", p:"South Rim → Trailer Village", by:"@kitchen_lou", tag:"Housing", c:1},
-  {t:"Osprey Atmos 48L pack", p:"$90", by:"@trailcrew_mara", tag:"Gear", c:2},
-  {t:"Rideshare to Flagstaff", p:"Fri 5pm · 2 seats", by:"@retail_jen", tag:"Rides", c:4},
-  {t:"Mini fridge, works great", p:"$40", by:"@newhire_sky", tag:"For sale", c:5},
-  {t:"ISO winter boots W9", p:"Will trade / buy", by:"@shuttle_dispatch", tag:"Wanted", c:3},
-  {t:"Free firewood, Mather lot", p:"Free", by:"@ranger_pa", tag:"Free", c:0},
+const MARKET=[
+ {t:"Dorm room swap",p:"Victor Hall → Trailer Village",by:"@yavapai_tavern",tag:"Housing",c:1},
+ {t:"Osprey Atmos 48L pack",p:"$90",by:"@yavapai_front",tag:"Gear",c:0},
+ {t:"Rideshare to Flagstaff",p:"Fri 5pm · 2 seats",by:"@gc_outfitters",tag:"Rides",c:2},
+ {t:"Mini fridge, works great",p:"$40",by:"@newhire_sky",tag:"For sale",c:4},
+ {t:"ISO winter boots W9",p:"Will trade / buy",by:"@market_deli",tag:"Wanted",c:3},
+ {t:"Free firewood, Trailer Village",p:"Free",by:"@trailer_village",tag:"Free",c:5},
 ];
-
-let SHIFTS = [
-  {w:"Sat · 4p–close", what:"El Tovar Dining — server", by:"@kitchen_lou", div:"Food & Bev", c:1, claimed:false},
-  {w:"Sun · 6a–2p", what:"Bright Angel — front desk", by:"@lodging_ria", div:"Lodging", c:0, claimed:false},
-  {w:"Wed · 5:30a", what:"Hermit Road — shuttle driver", by:"@shuttle_dispatch", div:"Transport", c:3, claimed:false},
-  {w:"Thu · 10a–6p", what:"Verkamp's — retail floor", by:"@retail_jen", div:"Retail", c:4, claimed:false},
+let SHIFTS=[
+ {w:"Sat · 4p–close",what:"Yavapai Tavern — server",by:"@yavapai_tavern",div:"Food & Bev",c:1,claimed:false},
+ {w:"Sun · 6a–2p",what:"Yavapai Lodge — front desk",by:"@yavapai_front",div:"Lodging",c:0,claimed:false},
+ {w:"Wed · 10a–6p",what:"Grand Canyon Outfitters — retail floor",by:"@gc_outfitters",div:"Retail",c:2,claimed:false},
+ {w:"Thu · 7a–3p",what:"Canyon Village Market & Deli — line",by:"@market_deli",div:"Food & Bev",c:1,claimed:false},
 ];
+const TRENDING=["#yavapailodge","#shiftswap","#shuttlestatus","#brightangel","#condorwatch","#newhires","#trailervillage","#desertview","#staffhousing","#monsoonseason"];
 
-const TRENDING = ["#brightangel","#shuttlestatus","#shiftswap","#sunrisepoint","#condorwatch","#newhires","#phantomranch","#rimtrail","#staffhousing","#monsoonseason"];
+/* transit data */
+const PARK_BUSES=[
+ {n:"Village (Blue)",color:"var(--r-blue)",rt:"Visitor Center ↔ lodges, campgrounds, Market Plaza",hrs:"7:00a–9:00p",st:"Running"},
+ {n:"Kaibab / Rim (Orange)",color:"var(--r-orange)",rt:"Visitor Center ↔ Yaki Point / S. Kaibab Trailhead",hrs:"4:30a–1 hr past sunset",st:"Running"},
+ {n:"Hermits Rest (Red)",color:"var(--r-red)",rt:"Village ↔ Hermits Rest · 7 mi · 9 overlooks",hrs:"Mar 1–Nov 30",st:"Running"},
+ {n:"Tusayan (Purple)",color:"var(--r-purple)",rt:"Visitor Center ↔ Tusayan gateway",hrs:"Summer only",st:"Seasonal"},
+];
+const DNC_SHUTTLE=[
+ {w:"Route A",what:"Staff Housing ↔ Yavapai Lodge / Market Plaza",by:"every 30 min (placeholder)"},
+ {w:"Route B",what:"Trailer Village ↔ Canyon Village Market & Deli",by:"peak shifts (placeholder)"},
+ {w:"Tusayan",what:"The Squire / Tusayan ↔ South Rim work sites",by:"by shift (placeholder)"},
+];
+const GROOME_TOFLAG=[["10:15a","12:00p"],["3:30p","5:15p"],["6:30p","8:15p"]];
+const GROOME_TOGC=[["7:45a","9:15a"],["12:45p","2:30p"],["3:45p","5:30p"]];
 
-/* =========================================================
-   3. Render
-   ========================================================= */
-const $ = s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
-const avi = (initials,color,size)=>`<div class="avi" style="background:${color}; width:${size||46}px;height:${size||46}px">${initials}</div>`;
-const ini = h => h.replace(/[@_]/g,' ').trim().split(' ').slice(0,2).map(w=>w[0]?.toUpperCase()||'').join('');
+/* ---------- render ---------- */
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const avi=(t,c)=>`<div class="avi" style="background:${c}">${t}</div>`;
+const ini=h=>h.replace(/[@_]/g,' ').trim().split(' ').slice(0,2).map(w=>w[0]?.toUpperCase()||'').join('');
+const esc=s=>s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 
-function renderMe(){
-  $('#meAvi').style.background = ME.color; $('#meAvi').textContent = ME.initials;
-  $('#meName').textContent = ME.name; $('#meRole').textContent = ME.role;
-  $('#meCo').textContent = ME.company; $('#meArea').textContent = ME.area; $('#meStatus').textContent = ME.status;
-  $('#meCrews').innerHTML = ME.crews.map(c=>`<span class="tag">${c}</span>`).join('');
-  $('#stCrews').textContent = ME.crews.length;
+function renderMe(){ $('#meAvi').style.background=ME.color; $('#meAvi').textContent=ME.initials;
+  $('#meName').textContent=ME.name; $('#meRole').textContent=ME.role; $('#meCo').textContent=ME.company;
+  $('#meProp').textContent=ME.property; $('#meArea').textContent=ME.area; $('#meStatus').textContent=ME.status;
+  $('#meCrews').innerHTML=ME.crews.map(c=>`<span class="tag">${c}</span>`).join(''); $('#stCrews').textContent=ME.crews.length; }
+function postHTML(p){ const media=p.media?`<div class="media" style="background:linear-gradient(135deg,${COLORS[p.c]},color-mix(in oklab,${COLORS[p.c]} 35%,#000))"></div>`:'';
+  return `<div class="post">${avi(ini('@'+p.h),COLORS[p.c])}<div>
+    <div class="handle">@${p.h}<span class="div">${p.div}</span> <span class="meta">· ${p.t}</span></div>
+    <div class="text">${esc(p.x)}</div>${media}
+    <div class="actions"><button class="icon-btn act-like">♥ <span>${p.l}</span></button>
+    <button class="icon-btn">🔁 <span>${p.r}</span></button><button class="icon-btn">💬 Reply</button><button class="icon-btn">↗ Share</button></div>
+  </div></div>`; }
+function renderFeed(){ $('#feed').innerHTML=POSTS.map(postHTML).join(''); $('#stPosts').textContent=POSTS.filter(p=>p.mine).length; }
+function renderCrews(){ const h=CREWS.map(c=>`<div class="tile"><div class="crewicon" style="background:${COLORS[c.c]}">${c.i}</div>
+   <h3>${c.n}</h3><div class="small">${c.d}</div>
+   <div style="margin-top:10px;display:flex;justify-content:space-between;align-items:center">
+   <span class="tag">${c.m} members</span><button class="btn sm">${ME.crews.some(x=>c.n.includes(x))?'Joined ✓':'Join'}</button></div></div>`).join('');
+  $('#crews').innerHTML=h; $('#exploreCrews').innerHTML=h; }
+function renderMarket(){ $('#market').innerHTML=MARKET.map(m=>`<div class="tile">
+   <div style="display:flex;justify-content:space-between;align-items:start;gap:8px"><h3>${m.t}</h3><span class="tag">${m.tag}</span></div>
+   <div class="price" style="margin:6px 0">${m.p}</div><div class="small">Posted by ${m.by}</div>
+   <button class="btn sm" style="margin-top:10px;width:100%">Message</button></div>`).join(''); }
+function renderShifts(){ $('#shifts').innerHTML=SHIFTS.map((s,i)=>`<div class="shiftrow">
+   <div class="when">${s.w}</div><div class="what">${s.what}<div class="small">${s.div} · offered by ${s.by}</div></div>
+   <button class="btn ${s.claimed?'':'primary'} sm claim" data-i="${i}" ${s.claimed?'disabled':''}>${s.claimed?'Claimed ✓':'Claim swap'}</button></div>`).join('');
+  const open=SHIFTS.filter(s=>!s.claimed).length; $('#wSwaps').textContent=open+' open'; $('#stSwaps').textContent=SHIFTS.filter(s=>s.claimed).length; }
+function renderExplore(){ $('#trending').innerHTML=TRENDING.map(t=>`<span class="tag">${t}</span>`).join(''); }
+function renderTransit(){
+  $('#parkBuses').innerHTML=PARK_BUSES.map(b=>`<div class="routebar">
+    <span class="dotc" style="background:${b.color};color:${b.color}"></span>
+    <span class="rn">${b.n}</span><span class="rt small">${b.rt}</span>
+    <span class="tag">${b.hrs}</span><strong style="color:${b.st==='Running'?'var(--ok)':'var(--warn)'}">${b.st}</strong></div>`).join('');
+  $('#dncShuttle').innerHTML=DNC_SHUTTLE.map(s=>`<div class="routebar">
+    <span class="dotc" style="background:var(--dnc);color:var(--dnc)"></span>
+    <span class="rn">${s.w}</span><span class="rt small">${s.what}</span><span class="tag">${s.by}</span></div>`).join('');
+  const row=a=>a.map(t=>`<div class="t"><span>depart <b>${t[0]}</b></span><span>arrive <b>${t[1]}</b></span></div>`).join('');
+  $('#gToFlag').innerHTML=row(GROOME_TOFLAG); $('#gToGC').innerHTML=row(GROOME_TOGC);
 }
-function postHTML(p){
-  const media = p.media ? `<div class="media" style="background:linear-gradient(135deg, ${COLORS[p.c]}, color-mix(in oklab, ${COLORS[p.c]} 40%, #000))"></div>` : '';
-  return `<div class="post">
-    ${avi(ini('@'+p.h), COLORS[p.c])}
-    <div>
-      <div class="handle">@${p.h}<span class="div">${p.div}</span> <span class="meta">· ${p.t}</span></div>
-      <div class="text">${escapeHTML(p.x)}</div>${media}
-      <div class="actions" data-h="${p.h}">
-        <button class="icon-btn act-like">♥ <span>${p.l}</span></button>
-        <button class="icon-btn">🔁 <span>${p.r}</span></button>
-        <button class="icon-btn">💬 ${p.c2||'Reply'}</button>
-        <button class="icon-btn">↗ Share</button>
-      </div>
-    </div></div>`;
-}
-function renderFeed(){ $('#feed').innerHTML = POSTS.map(postHTML).join(''); $('#stPosts').textContent = POSTS.filter(p=>p.mine).length; }
-function renderCrews(){
-  const html = CREWS.map(c=>`<div class="tile">
-    <div class="crewicon" style="background:${COLORS[c.c]}">${c.i}</div>
-    <h3>${c.n}</h3><div class="small">${c.d}</div>
-    <div style="margin-top:10px; display:flex; justify-content:space-between; align-items:center">
-      <span class="tag">${c.m} members</span>
-      <button class="btn sm">${ME.crews.some(x=>c.n.includes(x))?'Joined ✓':'Join'}</button>
-    </div></div>`).join('');
-  $('#crews').innerHTML = html; $('#exploreCrews').innerHTML = html;
-}
-function renderMarket(){
-  $('#market').innerHTML = MARKET.map(m=>`<div class="tile">
-    <div style="display:flex; justify-content:space-between; align-items:start; gap:8px">
-      <h3>${m.t}</h3><span class="tag">${m.tag}</span></div>
-    <div class="price" style="margin:6px 0">${m.p}</div>
-    <div class="small">Posted by ${m.by}</div>
-    <button class="btn sm" style="margin-top:10px; width:100%">Message</button>
-  </div>`).join('');
-}
-function renderShifts(){
-  $('#shifts').innerHTML = SHIFTS.map((s,idx)=>`<div class="shiftrow">
-    <div class="when">${s.w}</div>
-    <div class="what">${s.what}<div class="small">${s.div} · offered by ${s.by}</div></div>
-    <button class="btn ${s.claimed?'':'primary'} sm claim" data-i="${idx}" ${s.claimed?'disabled':''}>${s.claimed?'Claimed ✓':'Claim swap'}</button>
-  </div>`).join('');
-  const open = SHIFTS.filter(s=>!s.claimed).length;
-  $('#wSwaps').textContent = open + ' open'; $('#stSwaps').textContent = SHIFTS.filter(s=>s.claimed).length;
-}
-function renderExplore(){ $('#trending').innerHTML = TRENDING.map(t=>`<span class="tag">${t}</span>`).join(''); }
-function escapeHTML(s){ return s.replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
 
-/* =========================================================
-   4. Interactions
-   ========================================================= */
-// post composer
-$('#postBtn').onclick = ()=>{
-  const ta=$('#composer'); const txt=ta.value.trim(); if(!txt) return;
-  POSTS.unshift({h:ME.name.toLowerCase().replace(/[^a-z]/g,'')||'me', n:ME.name, div:ME.crews[0], c:0, t:'now', x:txt, l:0, r:0, media:0, mine:true});
-  ta.value=''; renderFeed();
-};
+/* ---------- interactions ---------- */
+$('#postBtn').onclick=()=>{ const ta=$('#composer'),t=ta.value.trim(); if(!t)return;
+  POSTS.unshift({h:(ME.name.toLowerCase().replace(/[^a-z]/g,'')||'me'),n:ME.name,div:ME.crews[0],c:0,t:'now',x:t,l:0,r:0,media:0,mine:true}); ta.value=''; renderFeed(); };
 $$('.pill[data-tag]').forEach(p=>p.onclick=()=>{ const ta=$('#composer'); ta.value=(ta.value+' '+p.dataset.tag).trim()+' '; ta.focus(); });
-// like (event delegation)
-$('#feed').addEventListener('click', e=>{
-  const b=e.target.closest('.act-like'); if(!b) return;
-  const span=b.querySelector('span'); const liked=b.classList.toggle('liked');
-  span.textContent = (+span.textContent) + (liked?1:-1);
-});
-// claim shift
-$('#shifts').addEventListener('click', e=>{
-  const b=e.target.closest('.claim'); if(!b) return;
-  SHIFTS[+b.dataset.i].claimed=true; renderShifts();
-});
+$('#feed').addEventListener('click',e=>{ const b=e.target.closest('.act-like'); if(!b)return; const s=b.querySelector('span'); const on=b.classList.toggle('liked'); s.textContent=(+s.textContent)+(on?1:-1); });
+$('#shifts').addEventListener('click',e=>{ const b=e.target.closest('.claim'); if(!b)return; SHIFTS[+b.dataset.i].claimed=true; renderShifts(); });
 
-/* =========================================================
-   5. Tabs / views + palette + theme
-   ========================================================= */
-function show(view){
-  $$('.view').forEach(v=>v.classList.toggle('active', v.id==='view-'+view));
-  $$('.tab').forEach(t=>t.setAttribute('aria-current', t.dataset.view===view?'page':'false'));
+/* ---------- tabs / palette / theme ---------- */
+function show(v){ $$('.view').forEach(x=>x.classList.toggle('active',x.id==='view-'+v));
+  $$('.tab').forEach(t=>t.setAttribute('aria-current',t.dataset.view===v?'page':'false'));
   $$('.reveal').forEach(el=>{ if(el.offsetParent!==null) requestAnimationFrame(()=>el.classList.add('in')); });
-  window.scrollTo({top:0, behavior:'smooth'});
-}
-$('#tabs').addEventListener('click', e=>{ const t=e.target.closest('.tab'); if(t) show(t.dataset.view); });
-document.addEventListener('click', e=>{ const g=e.target.closest('[data-goto]'); if(g) show(g.dataset.goto); });
+  window.scrollTo({top:0,behavior:'smooth'}); }
+$('#tabs').addEventListener('click',e=>{ const t=e.target.closest('.tab'); if(t) show(t.dataset.view); });
+document.addEventListener('click',e=>{ const g=e.target.closest('[data-goto]'); if(g) show(g.dataset.goto); });
 
 const root=document.documentElement;
-function setTheme(n){ if(n==='night') root.setAttribute('data-theme','night'); else root.removeAttribute('data-theme'); localStorage.setItem('canyon_theme',n); }
-const saved=localStorage.getItem('canyon_theme'); if(saved) setTheme(saved);
+function setTheme(n){ if(n==='night')root.setAttribute('data-theme','night'); else root.removeAttribute('data-theme'); localStorage.setItem('canyon_theme',n); }
+const saved=localStorage.getItem('canyon_theme'); if(saved)setTheme(saved);
 function toggleTheme(){ setTheme(root.getAttribute('data-theme')==='night'?'day':'night'); }
 $('#btnTheme').onclick=toggleTheme; $('#fabTheme').onclick=toggleTheme;
-addEventListener('keydown', e=>{ if(e.key.toLowerCase()==='t' && !e.metaKey && !e.ctrlKey && e.target.tagName!=='TEXTAREA' && e.target.tagName!=='INPUT') toggleTheme(); });
+addEventListener('keydown',e=>{ if(e.key.toLowerCase()==='t'&&!e.metaKey&&!e.ctrlKey&&!/INPUT|TEXTAREA/.test(e.target.tagName)) toggleTheme(); });
 
-const palette=$('#palette'), palInput=$('#palInput'), palResults=$('#palResults');
-const CMDS=[['Go: Home','home'],['Go: Explore','explore'],['Go: Crews','crews'],['Go: Marketplace','marketplace'],['Go: Shifts','shifts'],['Toggle Night','__night'],['Toggle Day','__day']];
+const palette=$('#palette'),palInput=$('#palInput'),palResults=$('#palResults');
+const CMDS=[['Go: Home','home'],['Go: Explore','explore'],['Go: Crews','crews'],['Go: Transit','transit'],['Go: Marketplace','marketplace'],['Go: Shifts','shifts'],['Toggle Night','__night'],['Toggle Day','__day']];
 function openPal(){ palette.classList.add('open'); palInput.value=''; renderPal(CMDS); palInput.focus(); }
 function closePal(){ palette.classList.remove('open'); }
-function renderPal(items){ palResults.innerHTML=items.map(c=>`<div class="result" data-cmd="${c[1]}">${c[0]}<span class="kbd">↵</span></div>`).join('')||'<div class="result">No matches</div>'; }
+function renderPal(it){ palResults.innerHTML=it.map(c=>`<div class="result" data-cmd="${c[1]}">${c[0]}<span class="kbd">↵</span></div>`).join('')||'<div class="result">No matches</div>'; }
 $('#btnPalette').onclick=openPal; $('#fabPalette').onclick=openPal;
-addEventListener('keydown', e=>{ if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){ e.preventDefault(); openPal(); } if(e.key==='Escape') closePal(); });
-palInput.addEventListener('input', ()=>{ const q=palInput.value.toLowerCase(); renderPal(CMDS.filter(c=>c[0].toLowerCase().includes(q))); });
-palResults.addEventListener('click', e=>{ const r=e.target.closest('.result'); if(r&&r.dataset.cmd) runCmd(r.dataset.cmd); });
-palInput.addEventListener('keydown', e=>{ if(e.key==='Enter'){ const r=palResults.querySelector('.result[data-cmd]'); if(r) runCmd(r.dataset.cmd); }});
-function runCmd(c){ closePal(); if(c==='__night') setTheme('night'); else if(c==='__day') setTheme('day'); else show(c); }
+addEventListener('keydown',e=>{ if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){ e.preventDefault(); openPal(); } if(e.key==='Escape') closePal(); });
+palInput.addEventListener('input',()=>{ const q=palInput.value.toLowerCase(); renderPal(CMDS.filter(c=>c[0].toLowerCase().includes(q))); });
+palResults.addEventListener('click',e=>{ const r=e.target.closest('.result'); if(r&&r.dataset.cmd) runCmd(r.dataset.cmd); });
+palInput.addEventListener('keydown',e=>{ if(e.key==='Enter'){ const r=palResults.querySelector('.result[data-cmd]'); if(r) runCmd(r.dataset.cmd); }});
+function runCmd(c){ closePal(); if(c==='__night')setTheme('night'); else if(c==='__day')setTheme('day'); else show(c); }
 
-/* =========================================================
-   6. LIVE data — weather (Open-Meteo) + alerts (NWS). No keys.
-   ========================================================= */
-async function loadWeather(){
-  try{
-    const tz=Intl.DateTimeFormat().resolvedOptions().timeZone||'America/Phoenix';
-    const pts=[{id:'wxSouth',s:'sx',lat:36.0544,lon:-112.1401},{id:'wxPhantom',s:'px',lat:36.0986,lon:-112.0969}];
-    for(const p of pts){
-      const u=`https://api.open-meteo.com/v1/forecast?latitude=${p.lat}&longitude=${p.lon}&current=temperature_2m,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=${encodeURIComponent(tz)}`;
-      const j=await (await fetch(u)).json();
-      const t=Math.round(j.current.temperature_2m), w=Math.round(j.current.wind_speed_10m);
-      const hi=Math.round(j.daily.temperature_2m_max[0]), lo=Math.round(j.daily.temperature_2m_min[0]);
-      const full=`${t}°F (H ${hi}/L ${lo}) · wind ${w} mph`, brief=`${t}°F`;
-      $('#'+p.id).textContent=full; const s=$('#'+p.s); if(s) s.textContent=brief;
-      $('#wxUpdated').textContent='Updated '+new Date().toLocaleTimeString();
-      $('#upd').textContent='· updated '+new Date().toLocaleTimeString();
-    }
-  }catch(err){ ['wxSouth','wxPhantom'].forEach(i=>$('#'+i).textContent='Unavailable'); }
-}
-async function loadAlerts(){
-  const el=$('#alertsList');
-  try{
-    const j=await (await fetch('https://api.weather.gov/alerts/active?point=36.0544,-112.1401',{headers:{'Accept':'application/geo+json'}})).json();
-    const f=(j.features||[]).slice(0,4);
-    if(!f.length){ el.innerHTML='<span style="color:var(--ok)">✓ No active alerts.</span>'; $('#ax').textContent='none'; return; }
-    el.innerHTML=f.map(a=>`<div class="alert">${a.properties?.event||'Alert'} — <span class="small">${a.properties?.headline||''}</span></div>`).join('');
-    $('#ax').textContent=f.length+' active';
-  }catch(err){ el.textContent='Alerts unavailable.'; $('#ax').textContent='—'; }
-}
+/* ---------- live data (Open-Meteo + NWS · no keys) ---------- */
+async function loadWeather(){ try{
+  const tz=Intl.DateTimeFormat().resolvedOptions().timeZone||'America/Phoenix';
+  for(const p of [{id:'wxSouth',s:'sx',lat:36.0544,lon:-112.1401},{id:'wxPhantom',s:'px',lat:36.0986,lon:-112.0969}]){
+    const u=`https://api.open-meteo.com/v1/forecast?latitude=${p.lat}&longitude=${p.lon}&current=temperature_2m,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=${encodeURIComponent(tz)}`;
+    const j=await (await fetch(u)).json(); const t=Math.round(j.current.temperature_2m),w=Math.round(j.current.wind_speed_10m);
+    const hi=Math.round(j.daily.temperature_2m_max[0]),lo=Math.round(j.daily.temperature_2m_min[0]);
+    $('#'+p.id).textContent=`${t}°F (H ${hi}/L ${lo}) · wind ${w} mph`; const s=$('#'+p.s); if(s)s.textContent=`${t}°F`;
+    $('#wxUpdated').textContent='Updated '+new Date().toLocaleTimeString(); $('#upd').textContent='· updated '+new Date().toLocaleTimeString();
+  }}catch(e){ ['wxSouth','wxPhantom'].forEach(i=>$('#'+i).textContent='Unavailable'); } }
+async function loadAlerts(){ const el=$('#alertsList'); try{
+  const j=await (await fetch('https://api.weather.gov/alerts/active?point=36.0544,-112.1401',{headers:{'Accept':'application/geo+json'}})).json();
+  const f=(j.features||[]).slice(0,4);
+  if(!f.length){ el.innerHTML='<span style="color:var(--ok)">✓ No active alerts.</span>'; $('#ax').textContent='none'; return; }
+  el.innerHTML=f.map(a=>`<div class="alert">${a.properties?.event||'Alert'} — <span class="small">${a.properties?.headline||''}</span></div>`).join(''); $('#ax').textContent=f.length+' active';
+  }catch(e){ el.textContent='Alerts unavailable.'; $('#ax').textContent='—'; } }
 
-/* =========================================================
-   7. Boot
-   ========================================================= */
-renderMe(); renderFeed(); renderCrews(); renderMarket(); renderShifts(); renderExplore();
+/* ---------- boot ---------- */
+renderMe(); renderFeed(); renderCrews(); renderMarket(); renderShifts(); renderExplore(); renderTransit();
 $$('.reveal').forEach(el=>requestAnimationFrame(()=>el.classList.add('in')));
-loadWeather(); loadAlerts();
-setInterval(loadWeather, 10*60*1000); setInterval(loadAlerts, 15*60*1000);
+loadWeather(); loadAlerts(); setInterval(loadWeather,600000); setInterval(loadAlerts,900000);
 </script>
 </body>
 </html>

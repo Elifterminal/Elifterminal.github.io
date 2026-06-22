@@ -1,0 +1,13 @@
+CanyonNet demo — background photography
+=======================================
+Both images are from Pexels (Pexels License: free for commercial & personal use,
+no attribution required). Crediting here for auditability.
+
+canyon-sunset.jpg  — Grand Canyon at sunset/dusk panorama
+                     https://www.pexels.com/photo/35481374/
+canyon-dusk.jpg    — Grand Canyon at twilight, crescent moon + stars
+                     https://www.pexels.com/photo/7248656/
+
+Pexels License: https://www.pexels.com/license/
+Swap freely — referenced by canyonOPs.html as assets/canyon-sunset.jpg (light theme)
+and assets/canyon-dusk.jpg (dark theme).
