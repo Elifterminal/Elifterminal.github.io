@@ -144,6 +144,17 @@ body{margin:0; color:var(--fg); overflow-x:hidden;
   text-transform:uppercase; color:var(--muted); margin-bottom:8px}
 .alert{font-size:13px; padding:8px 10px; border-radius:9px; border:1px solid color-mix(in oklab,var(--warn) 40%, var(--border));
   background:color-mix(in oklab,var(--warn) 12%, transparent); margin-bottom:6px}
+/* pinned park alerts (left column) */
+.pa{display:flex; gap:11px; align-items:flex-start; padding:11px 0; border-top:1px dashed var(--border)}
+.pa:first-child{border-top:0}
+.pa .paico{width:32px; height:32px; border-radius:9px; display:grid; place-items:center; font-size:16px; flex:none}
+.pa .pat{font-weight:800; font-size:13.5px; line-height:1.32}
+.pa .pad{font-size:12px; color:var(--muted); margin-top:2px}
+.pa.crit .paico{background:color-mix(in oklab,var(--err) 18%, transparent)}
+.pa.crit .pat{color:var(--err)}
+.pa.warn .paico{background:color-mix(in oklab,var(--warn) 18%, transparent)}
+.pa.info .paico{background:color-mix(in oklab,var(--dnc) 16%, transparent)}
+.pinhdr{display:flex; align-items:center; gap:6px}
 
 .cardgrid{display:grid; grid-template-columns:repeat(auto-fill,minmax(232px,1fr)); gap:14px}
 .tile{border:1px solid var(--border); border-radius:14px; background:color-mix(in oklab,var(--term) 96%, transparent); box-shadow:var(--card-shadow); padding:15px; transition:.15s}
@@ -239,18 +250,26 @@ footer b{color:var(--fg)}
 <main class="main" id="app">
   <!-- ============ HOME ============ -->
   <div class="view home active" id="view-home">
-    <aside class="panel reveal">
-      <header><span class="badge"><span class="spark"></span> CONSOLE</span> You on the rim <span class="demo-pill">demo</span></header>
-      <div class="body">
-        <div class="who"><div class="avi" id="meAvi"></div><div><div class="name" id="meName"></div><div class="role" id="meRole"></div></div></div>
-        <div class="kv"><span>Employer</span><strong id="meCo"></strong></div>
-        <div class="kv"><span>Property</span><strong id="meProp"></strong></div>
-        <div class="kv"><span>Area</span><strong id="meArea"></strong></div>
-        <div class="kv"><span>Status</span><strong class="tag on" id="meStatus"></strong></div>
-        <div class="stat3"><div><b id="stPosts">0</b><span class="small">posts</span></div><div><b id="stCrews">0</b><span class="small">crews</span></div><div><b id="stSwaps">0</b><span class="small">swaps</span></div></div>
-        <div class="chips" id="meCrews"></div>
-      </div>
-    </aside>
+    <div class="reveal" style="display:grid; gap:16px; align-content:start">
+      <aside class="panel">
+        <header><span class="badge"><span class="spark"></span> CONSOLE</span> You on the rim <span class="demo-pill">demo</span></header>
+        <div class="body">
+          <div class="who"><div class="avi" id="meAvi"></div><div><div class="name" id="meName"></div><div class="role" id="meRole"></div></div></div>
+          <div class="kv"><span>Employer</span><strong id="meCo"></strong></div>
+          <div class="kv"><span>Property</span><strong id="meProp"></strong></div>
+          <div class="kv"><span>Area</span><strong id="meArea"></strong></div>
+          <div class="kv"><span>Status</span><strong class="tag on" id="meStatus"></strong></div>
+          <div class="stat3"><div><b id="stPosts">0</b><span class="small">posts</span></div><div><b id="stCrews">0</b><span class="small">crews</span></div><div><b id="stSwaps">0</b><span class="small">swaps</span></div></div>
+          <div class="chips" id="meCrews"></div>
+        </div>
+      </aside>
+      <!-- PINNED NPS / park alerts — kept current, never scrolls away like a feed post -->
+      <aside class="panel">
+        <header><span class="badge"><span class="spark"></span> 📌 PINNED</span> Park alerts <span class="demo-pill">NPS feed</span></header>
+        <div class="body" id="parkAlerts"></div>
+        <div class="body small" style="border-top:1px solid var(--border); color:var(--muted)">Pinned by DNC Ops + auto-pulled from NPS — kept current, always visible.</div>
+      </aside>
+    </div>
 
     <section style="display:grid; gap:16px">
       <article class="panel reveal">
@@ -434,6 +453,15 @@ let SHIFTS=[
 ];
 const TRENDING=["#yavapailodge","#shiftswap","#shuttlestatus","#brightangel","#condorwatch","#newhires","#trailervillage","#desertview","#staffhousing","#monsoonseason"];
 
+/* PINNED park alerts — NOT feed posts. Pinned, kept current, always in the left column.
+   Demo content; goes live from the NPS alerts/news feed via the backend proxy. */
+const PARK_ALERTS=[
+ {lvl:"crit",ico:"💧",t:"Stage 2 water conservation in effect",d:"Limit laundry, dish runs & long showers — Transcanyon Waterline repairs ongoing. (NPS · pinned)"},
+ {lvl:"warn",ico:"⛔",t:"North Kaibab Trail — hard closure Oct 15",d:"Closed to all access through ~Feb for pipeline rehab; route inner-canyon travel via Bright Angel."},
+ {lvl:"warn",ico:"🔥",t:"Fire restrictions: Stage 1",d:"No wood or charcoal fires outside developed sites. Check InciWeb for active incidents."},
+ {lvl:"info",ico:"🌌",t:"Grand Canyon Star Party · Jun 6–13",d:"Nightly 8pm programs at the Visitor Center; ranger constellation tours 9 / 9:30 / 10pm."},
+];
+
 /* transit data */
 const PARK_BUSES=[
  {n:"Village (Blue)",color:"var(--r-blue)",rt:"Visitor Center ↔ lodges, campgrounds, Market Plaza",hrs:"7:00a–9:00p",st:"Running"},
@@ -481,6 +509,8 @@ function renderShifts(){ $('#shifts').innerHTML=SHIFTS.map((s,i)=>`<div class="s
    <button class="btn ${s.claimed?'':'primary'} sm claim" data-i="${i}" ${s.claimed?'disabled':''}>${s.claimed?'Claimed ✓':'Claim swap'}</button></div>`).join('');
   const open=SHIFTS.filter(s=>!s.claimed).length; $('#wSwaps').textContent=open+' open'; $('#stSwaps').textContent=SHIFTS.filter(s=>s.claimed).length; }
 function renderExplore(){ $('#trending').innerHTML=TRENDING.map(t=>`<span class="tag">${t}</span>`).join(''); }
+function renderAlerts(){ $('#parkAlerts').innerHTML=PARK_ALERTS.map(a=>`<div class="pa ${a.lvl}">
+  <div class="paico">${a.ico}</div><div><div class="pat">${a.t}</div><div class="pad">${a.d}</div></div></div>`).join(''); }
 function renderTransit(){
   $('#parkBuses').innerHTML=PARK_BUSES.map(b=>`<div class="routebar">
     <span class="dotc" style="background:${b.color};color:${b.color}"></span>
@@ -545,7 +575,7 @@ async function loadAlerts(){ const el=$('#alertsList'); try{
   }catch(e){ el.textContent='Alerts unavailable.'; $('#ax').textContent='—'; } }
 
 /* ---------- boot ---------- */
-renderMe(); renderFeed(); renderCrews(); renderMarket(); renderShifts(); renderExplore(); renderTransit();
+renderMe(); renderFeed(); renderCrews(); renderMarket(); renderShifts(); renderExplore(); renderTransit(); renderAlerts();
 $$('.reveal').forEach(el=>requestAnimationFrame(()=>el.classList.add('in')));
 loadWeather(); loadAlerts(); setInterval(loadWeather,600000); setInterval(loadAlerts,900000);
 </script>
