@@ -242,6 +242,7 @@ footer b{color:var(--fg)}
   <span>Weather <b id="sx">…</b></span>
   <span>Phantom Ranch <b id="px">…</b></span>
   <span>Alerts <b id="ax">…</b></span>
+  <span>Water <b style="color:var(--warn)">Stage 2</b></span>
   <span>Park buses <b style="color:var(--ok)">running</b></span>
   <span>Groome → Flagstaff <b>10:15a · 3:30p · 6:30p</b></span>
   <span class="small" id="upd"></span>
@@ -455,11 +456,11 @@ const TRENDING=["#yavapailodge","#shiftswap","#shuttlestatus","#brightangel","#c
 
 /* PINNED park alerts — NOT feed posts. Pinned, kept current, always in the left column.
    Demo content; goes live from the NPS alerts/news feed via the backend proxy. */
-const PARK_ALERTS=[
- {lvl:"crit",ico:"💧",t:"Stage 2 water conservation in effect",d:"Limit laundry, dish runs & long showers — Transcanyon Waterline repairs ongoing. (NPS · pinned)"},
- {lvl:"warn",ico:"⛔",t:"North Kaibab Trail — hard closure Oct 15",d:"Closed to all access through ~Feb for pipeline rehab; route inner-canyon travel via Bright Angel."},
- {lvl:"warn",ico:"🔥",t:"Fire restrictions: Stage 1",d:"No wood or charcoal fires outside developed sites. Check InciWeb for active incidents."},
- {lvl:"info",ico:"🌌",t:"Grand Canyon Star Party · Jun 6–13",d:"Nightly 8pm programs at the Visitor Center; ranger constellation tours 9 / 9:30 / 10pm."},
+const PARK_ALERTS=[  // current to NPS status as of 2026-06-22 — keep fresh before pitching
+ {lvl:"crit",ico:"💧",t:"Stage 2 Water Restrictions in effect",d:"Shorter showers, full loads of laundry & dishes, turn off taps — Transcanyon Waterline conservation. (NPS · current)"},
+ {lvl:"warn",ico:"🥵",t:"Extreme heat below the rim",d:"Avoid inner-canyon hiking 10am–4pm; carry water + salty snacks. Daily summer heat risk."},
+ {lvl:"warn",ico:"⛔",t:"North Kaibab Trail closure begins Oct 15",d:"Hard closure to ~Feb 2027 for waterline rehab — plan inner-canyon routes via Bright Angel."},
+ {lvl:"info",ico:"🔥",t:"South Rim fire restrictions lifted",d:"Campfires in established rings only — use caution; status can change fast in summer."},
 ];
 
 /* transit data */
