@@ -380,6 +380,7 @@ footer b{color:var(--fg)}
     <button class="tab" data-view="messages">Messages<span class="dm-dot"></span></button>
     <button class="tab" data-view="profile">Profile</button>
   </div>
+  <button id="btnAuth" class="btn sm primary" title="Sign in">Sign in</button>
   <button id="btnSearch" class="btn sm" title="Search (/)" aria-label="Search">🔎</button>
   <button id="btnBell" class="btn sm bell" title="Notifications" aria-label="Notifications">🔔<span class="nbadge" id="nbadge"></span></button>
   <div class="navbtns">
@@ -702,6 +703,17 @@ footer b{color:var(--fg)}
 <div class="palette" id="search" aria-hidden="true">
   <div class="panel"><input id="searchInput" placeholder="Search people, posts, marketplace, rides…" aria-label="Search" /><div id="searchResults"></div></div>
 </div>
+<div class="palette" id="authModal" aria-hidden="true">
+  <div class="panel" style="max-width:440px">
+    <div style="padding:15px 17px; border-bottom:1px solid var(--border); font-weight:900; color:var(--accent1)">Sign in to CanyonSoc</div>
+    <div class="body" style="padding:16px 17px">
+      <p class="small" style="margin-top:0">Enter your email and we'll send a magic link — no password to remember.</p>
+      <div class="field"><label>Email</label><input id="authEmail" type="email" placeholder="you@example.com" autocomplete="email" /></div>
+      <button class="btn primary" id="authSend" style="width:100%">Send magic link</button>
+      <div class="small" id="authMsg" style="margin-top:11px"></div>
+    </div>
+  </div>
+</div>
 <div class="lightbox" id="lightbox"><img id="lightboxImg" alt="" /></div>
 
 <script>
@@ -890,13 +902,15 @@ function initProfileForm(){
   fillSelect($('#pfCo'),COMPANIES,ME.company); $('#pfJob').value=ME.job;
   fillSelect($('#pfHouse'),HOUSING,ME.house); $('#pfStatus').value=ME.status; $('#pfBio').value=ME.bio||'';
 }
-$('#pfSave').onclick=()=>{
+$('#pfSave').onclick=async()=>{
   ME={...ME, name:$('#pfName').value.trim()||'You',
     handle:($('#pfHandle').value.trim()||'you').replace(/[^a-z0-9_]/gi,'').toLowerCase(),
     company:$('#pfCo').value, job:$('#pfJob').value.trim()||'—', house:$('#pfHouse').value,
     status:$('#pfStatus').value.trim()||'On the rim', bio:$('#pfBio').value.trim()};
   LS.set('canyonsoc_profile',ME); renderMe(); renderFeed();
-  const s=$('#pfSaved'); s.textContent='Saved ✓'; setTimeout(()=>s.textContent='',1800);
+  const s=$('#pfSaved'); s.textContent='Saved ✓';
+  if(typeof sb!=='undefined'&&sb&&AUTH_USER){ s.textContent='Saving to cloud…'; const ok=await saveProfileToCloud(); s.textContent=ok?'Saved to cloud ✓':'Saved locally'; updateAuthUI(); }
+  setTimeout(()=>s.textContent='',2500);
 };
 
 /* image read + downscale */
@@ -1186,7 +1200,7 @@ function openPal(){ palette.classList.add('open'); palInput.value=''; renderPal(
 function closePal(){ palette.classList.remove('open'); }
 function renderPal(it){ palResults.innerHTML=it.map(c=>`<div class="result" data-cmd="${c[1]}">${c[0]}<span class="kbd">↵</span></div>`).join('')||'<div class="result">No matches</div>'; }
 $('#btnPalette').onclick=openPal; $('#fabPalette').onclick=openPal;
-addEventListener('keydown',e=>{ if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){ e.preventDefault(); openPal(); } if(e.key==='Escape'){ closePal(); $('#lightbox').classList.remove('open'); $('#notifPanel').classList.remove('open'); } });
+addEventListener('keydown',e=>{ if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){ e.preventDefault(); openPal(); } if(e.key==='Escape'){ closePal(); $('#lightbox').classList.remove('open'); $('#notifPanel').classList.remove('open'); $('#authModal').classList.remove('open'); } });
 palInput.addEventListener('input',()=>{ const q=palInput.value.toLowerCase(); renderPal(CMDS.filter(c=>c[0].toLowerCase().includes(q))); });
 palResults.addEventListener('click',e=>{ const r=e.target.closest('.result'); if(r&&r.dataset.cmd) runCmd(r.dataset.cmd); });
 palInput.addEventListener('keydown',e=>{ if(e.key==='Enter'){ const r=palResults.querySelector('.result[data-cmd]'); if(r) runCmd(r.dataset.cmd); }});
@@ -1258,12 +1272,51 @@ searchResults.addEventListener('click',e=>{ const r=e.target.closest('.sresult')
   else if(act==='market'){ MK_TYPE='All'; MK_TAGS.clear(); MK_Q=(r.dataset.q||'').toLowerCase(); const ms=$('#mkSearch'); if(ms)ms.value=r.dataset.q||''; renderMarket(); show('marketplace'); }
   else if(act==='transit'){ show('transit'); } });
 
+/* ================= Supabase — Phase 1: auth + profiles ================= */
+/* Publishable key is public by design; Row-Level Security is the boundary. */
+window.SUPABASE_URL=window.SUPABASE_URL||'https://ajkbsexxwbqjylbepvmh.supabase.co';
+window.SUPABASE_KEY=window.SUPABASE_KEY||'sb_publishable_6JxkK7tuVDrJiCAiIukwNA_QuiKnO-z';
+let sb=null, AUTH_USER=null;
+async function initSupabase(){ if(!window.SUPABASE_URL||!window.SUPABASE_KEY) return;
+  try{ const m=await import('https://esm.sh/@supabase/supabase-js@2');
+    sb=m.createClient(window.SUPABASE_URL,window.SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+    sb.auth.onAuthStateChange((_e,session)=>handleAuth(session));
+    const { data }=await sb.auth.getSession(); handleAuth(data.session);
+  }catch(err){ console.warn('Supabase init failed — staying in local mode:',err); }
+}
+function updateAuthUI(){ const b=$('#btnAuth'); if(!b)return;
+  if(AUTH_USER){ b.textContent='@'+(ME.handle||'you'); b.classList.remove('primary'); b.title='Signed in — click to sign out'; }
+  else { b.textContent='Sign in'; b.classList.add('primary'); b.title='Sign in'; } }
+function handleAuth(session){ AUTH_USER=session?session.user:null; updateAuthUI(); if(AUTH_USER) loadProfileFromCloud(); }
+async function loadProfileFromCloud(){ if(!sb||!AUTH_USER)return;
+  const { data,error }=await sb.from('profiles').select('*').eq('user_id',AUTH_USER.id).maybeSingle();
+  if(error){ console.warn('profile load:',error); return; }
+  if(data){ ME={...ME, name:data.name||ME.name, handle:data.handle||ME.handle, company:data.company||ME.company, job:data.job||ME.job,
+      house:data.housing||ME.house, status:data.status||ME.status, bio:data.bio||ME.bio, pic:data.pic_url||ME.pic, cover:data.cover_url||ME.cover};
+    LS.set('canyonsoc_profile',ME); initProfileForm(); renderMe(); renderFeed(); renderConvs(); updateAuthUI(); toast('☁️ Profile synced'); }
+  else { toast('👋 Welcome! Set up your profile below'); show('profile'); }
+}
+async function saveProfileToCloud(){ if(!sb||!AUTH_USER) return false;
+  const row={ user_id:AUTH_USER.id, handle:ME.handle, name:ME.name, company:ME.company, job:ME.job, housing:ME.house,
+    status:ME.status, bio:ME.bio, pic_url:ME.pic||null, cover_url:ME.cover||null, updated_at:new Date().toISOString() };
+  const { error }=await sb.from('profiles').upsert(row,{onConflict:'user_id'});
+  if(error){ if(error.code==='23505') toast('⚠️ That handle is already taken'); else toast('⚠️ Cloud save failed: '+(error.message||error.code)); return false; }
+  return true; }
+$('#btnAuth').onclick=()=>{ if(AUTH_USER){ if(confirm('Sign out of CanyonSoc?')&&sb) sb.auth.signOut().then(()=>toast('Signed out')); }
+  else { $('#authModal').classList.add('open'); $('#authEmail').focus(); } };
+$('#authModal').addEventListener('click',e=>{ if(e.target.id==='authModal') $('#authModal').classList.remove('open'); });
+$('#authSend').onclick=async()=>{ const email=$('#authEmail').value.trim(), msg=$('#authMsg');
+  if(!email){ msg.textContent='Enter your email.'; return; } if(!sb){ msg.textContent='Backend still loading — try again in a moment.'; return; }
+  msg.textContent='Sending…';
+  const { error }=await sb.auth.signInWithOtp({ email, options:{ emailRedirectTo: location.href.split('#')[0] } });
+  msg.textContent = error ? ('⚠️ '+error.message) : '✓ Magic link sent — check your email (and spam folder).'; };
+
 /* ================= boot ================= */
 initProfileForm(); renderMe(); renderFeed(); renderAlerts(); renderBuses(); renderRides();
 renderNewTags(); renderMarket(); renderPhotos(); renderParks(); renderFriends(); renderConvs(); updateDM();
 renderNotifs(); renderNotifFull(); updateBell();
 $$('.reveal').forEach(el=>requestAnimationFrame(()=>el.classList.add('in')));
-loadWeather(); loadAlerts(); loadSky();
+loadWeather(); loadAlerts(); loadSky(); initSupabase();
 setInterval(loadWeather,600000); setInterval(loadAlerts,900000); setInterval(loadSky,3600000);
 </script>
 </body>
