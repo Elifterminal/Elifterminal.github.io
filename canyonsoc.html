@@ -4,19 +4,16 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>CanyonSoc — Grand Canyon Community</title>
-<meta name="description" content="CanyonSoc — an independent community network for the people who live and work around the Grand Canyon. Feed, ride share, marketplace, messages. Live weather, NWS alerts, NPS feed, park buses." />
+<meta name="description" content="CanyonSoc — an independent community network for the people who live and work around the Grand Canyon. Profiles, friends, feed, ride share, marketplace, messages. Live weather, NWS alerts, NPS feed, Sky Party, park buses." />
 <style>
 /* =====================================================
    CANYONSOC — independent Grand Canyon community
    Modern canyon palette · WebGL canyon background
-   Not affiliated with any single concessioner.
    ===================================================== */
 :root{
-  /* modern canyon palette */
   --clay:#c9612f; --clay-bright:#e98a4e; --clay-deep:#8f3c1c;
   --river:#2bb8a3; --river-deep:#0f7c70; --sky:#5b7fb0;
   --gold:#dca54a; --sage:#86a06f; --plum:#6d4d7a;
-
   --bg:#0d0f15; --bg-2:#0a0c11; --fg:#f0ece4; --muted:#9aa3ad;
   --term:#13161f; --border:rgba(235,225,210,.12);
   --accent1:var(--clay-bright); --accent2:var(--river); --accent3:var(--gold);
@@ -38,7 +35,7 @@ html,body{height:100%}
 body{margin:0; color:var(--fg); overflow-x:hidden; background:var(--bg);
   font:15.5px/1.6 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Inter,Arial,"Noto Sans",sans-serif}
 
-/* === WebGL canyon background + scrim + faint grid texture === */
+/* WebGL canyon background + scrim + faint grid */
 #gl{position:fixed; inset:0; z-index:-3; width:100%; height:100%; display:block}
 #bg-fallback{position:fixed; inset:0; z-index:-4; background:
   radial-gradient(120% 80% at 72% 62%, color-mix(in oklab,var(--clay) 40%, transparent), transparent 55%),
@@ -46,7 +43,7 @@ body{margin:0; color:var(--fg); overflow-x:hidden; background:var(--bg);
 #bg-grid{position:fixed; inset:0; z-index:-2; pointer-events:none; opacity:.05;
   background-image:linear-gradient(to right, var(--fg) 1px, transparent 1px),
                   linear-gradient(to bottom, var(--fg) 1px, transparent 1px);
-  background-size:30px 30px; mask-image:linear-gradient(180deg, #000 0%, transparent 70%)}
+  background-size:30px 30px; mask-image:linear-gradient(180deg,#000 0%,transparent 70%)}
 #bg-scrim{position:fixed; inset:0; z-index:-1; pointer-events:none; background:
   linear-gradient(180deg, color-mix(in oklab,var(--bg) 35%, transparent), var(--scrim) 24%, var(--scrim) 80%, color-mix(in oklab,var(--bg) 62%, transparent))}
 
@@ -58,8 +55,7 @@ body{margin:0; color:var(--fg); overflow-x:hidden; background:var(--bg);
 .brand .marker{width:34px; height:34px; border-radius:10px; flex:none; position:relative; overflow:hidden;
   background:linear-gradient(135deg,var(--clay-bright),var(--clay-deep)); box-shadow:inset 0 0 0 2px rgba(255,255,255,.18), 0 3px 12px rgba(143,60,28,.5)}
 .brand .marker::after{content:""; position:absolute; left:5px; right:5px; bottom:6px; height:55%; border-radius:0 0 8px 8px;
-  background:
-    linear-gradient(120deg, transparent 46%, rgba(0,0,0,.28) 46% 52%, transparent 52%),
+  background:linear-gradient(120deg, transparent 46%, rgba(0,0,0,.28) 46% 52%, transparent 52%),
     linear-gradient(60deg, transparent 60%, rgba(0,0,0,.22) 60% 66%, transparent 66%),
     linear-gradient(180deg, rgba(255,255,255,.28), rgba(0,0,0,.18))}
 .brand .bt{display:flex; flex-direction:column; line-height:1.05; min-width:0}
@@ -82,6 +78,7 @@ body{margin:0; color:var(--fg); overflow-x:hidden; background:var(--bg);
 .btn:hover{border-color:color-mix(in oklab,var(--accent1) 50%, var(--border)); transform:translateY(-1px)}
 .btn.primary{color:#fff; border-color:transparent; background:linear-gradient(135deg,var(--clay-bright),var(--clay-deep))}
 .btn.sm{padding:6px 10px; font-size:12.5px; border-radius:9px}
+.btn.ghost{background:transparent}
 .btn:disabled{opacity:.55; cursor:default; transform:none}
 
 /* conditions strip */
@@ -109,10 +106,11 @@ body{margin:0; color:var(--fg); overflow-x:hidden; background:var(--bg);
 .spark{width:9px; height:9px; border-radius:50%; background:radial-gradient(circle at 30% 30%,var(--clay-bright),var(--clay-deep))}
 .demo-pill{font-size:9.5px; font-weight:900; letter-spacing:.1em; text-transform:uppercase; color:var(--warn);
   border:1px dashed color-mix(in oklab,var(--warn) 55%, var(--border)); padding:2px 6px; border-radius:6px}
+.seg{display:inline-flex; gap:3px; margin-left:auto; border:1px solid var(--border); border-radius:10px; padding:3px; background:color-mix(in oklab,var(--bg) 40%, transparent)}
+.seg button{border:0; background:transparent; color:var(--muted); font-weight:800; font-size:12px; padding:5px 11px; border-radius:7px; cursor:pointer}
+.seg button[aria-pressed="true"]{color:#fff; background:linear-gradient(135deg,var(--clay-bright),var(--clay-deep))}
 
 .who{display:flex; gap:12px; align-items:center; margin-bottom:6px}
-.who .avi{width:50px; height:50px; border-radius:13px; font-weight:900; color:#fff; display:grid; place-items:center; font-size:18px; flex:none}
-.who .name{font-weight:900; font-size:16px} .who .role{color:var(--muted); font-size:12.5px}
 .kv{display:flex; justify-content:space-between; gap:8px; padding:8px 0; border-bottom:1px dashed var(--border); font-size:13px}
 .kv:last-child{border-bottom:0}
 .tag{display:inline-flex; align-items:center; gap:6px; font-size:12px; padding:5px 10px; border-radius:999px;
@@ -122,9 +120,14 @@ body{margin:0; color:var(--fg); overflow-x:hidden; background:var(--bg);
 .tag.house{background:color-mix(in oklab,var(--plum) 20%, transparent); border-color:color-mix(in oklab,var(--plum) 45%, var(--border))}
 .chips{display:flex; flex-wrap:wrap; gap:7px; margin-top:10px}
 .small{font-size:12px; color:var(--muted)}
+.name{font-weight:900; font-size:16px} .role{color:var(--muted); font-size:12.5px}
 .stat3{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:12px; text-align:center}
-.stat3 div{border:1px solid var(--border); border-radius:10px; padding:8px 4px}
-.stat3 b{display:block; font-size:18px; color:var(--accent1)}
+.stat4{display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:4px; text-align:center}
+.stat3 div,.stat4 div{border:1px solid var(--border); border-radius:10px; padding:8px 4px}
+.stat3 b,.stat4 b{display:block; font-size:18px; color:var(--accent1)}
+
+/* avatars */
+.avi{border-radius:12px; display:grid; place-items:center; color:#fff; font-weight:900; font-size:16px; flex:none; background-size:cover; background-position:center}
 
 /* composer */
 .composer{display:grid; gap:10px}
@@ -139,16 +142,26 @@ body{margin:0; color:var(--fg); overflow-x:hidden; background:var(--bg);
 /* feed */
 .post{display:grid; grid-template-columns:46px 1fr; gap:12px; padding:14px 15px; border-top:1px solid var(--border)}
 .post:first-of-type{border-top:0}
-.avi{width:46px; height:46px; border-radius:12px; display:grid; place-items:center; color:#fff; font-weight:900; font-size:16px; flex:none}
+.post .avi{width:46px; height:46px}
 .handle{font-weight:900} .handle .co{font-weight:800; color:var(--river); font-size:11.5px; margin-left:6px}
 .meta{color:var(--muted); font-size:12px; font-weight:600}
 .post .text{white-space:pre-wrap; word-break:break-word; margin-top:2px}
-.post .media{margin-top:10px; border:1px solid var(--border); border-radius:12px; overflow:hidden; aspect-ratio:16/9}
-.actions{display:flex; gap:4px; margin-top:9px; flex-wrap:wrap}
+.post .media{margin-top:10px; border:1px solid var(--border); border-radius:12px; overflow:hidden; aspect-ratio:16/9; background-size:cover; background-position:center}
+.actions{display:flex; gap:4px; margin-top:9px; flex-wrap:wrap; align-items:center}
 .icon-btn{border:1px solid transparent; background:transparent; color:var(--muted); border-radius:9px; padding:6px 9px;
   font-weight:800; font-size:12.5px; cursor:pointer; transition:.12s; display:inline-flex; gap:6px; align-items:center; min-height:36px}
 .icon-btn:hover{background:color-mix(in oklab,var(--clay) 12%, transparent); color:var(--fg)}
-.icon-btn.liked{color:var(--clay-bright)}
+
+/* reactions */
+.reacts{display:flex; align-items:center; gap:6px; margin-top:9px; flex-wrap:wrap; position:relative}
+.rx{border:1px solid var(--border); background:color-mix(in oklab,var(--term) 60%, transparent); color:var(--fg); border-radius:999px; padding:4px 10px; font-size:13px; cursor:pointer; min-height:32px}
+.rx.on{background:color-mix(in oklab,var(--clay) 24%, transparent); border-color:color-mix(in oklab,var(--clay) 52%, var(--border))}
+.rx.add{color:var(--muted)}
+.rxpick{display:none; gap:3px; padding:5px; border:1px solid var(--border); border-radius:999px; background:var(--term);
+  position:absolute; bottom:calc(100% + 6px); left:0; z-index:6; box-shadow:var(--card-shadow)}
+.reacts.pick-open .rxpick{display:flex}
+.rxopt{border:0; background:transparent; font-size:19px; cursor:pointer; padding:4px; border-radius:8px; line-height:1}
+.rxopt:hover{background:color-mix(in oklab,var(--clay) 18%, transparent)}
 
 /* widgets */
 .widget{padding:13px 15px; border-top:1px solid var(--border)} .widget:first-child{border-top:0}
@@ -164,6 +177,9 @@ body{margin:0; color:var(--fg); overflow-x:hidden; background:var(--bg);
 .pa.crit .paico{background:color-mix(in oklab,var(--err) 18%, transparent)} .pa.crit .pat{color:var(--err)}
 .pa.warn .paico{background:color-mix(in oklab,var(--warn) 18%, transparent)}
 .pa.info .paico{background:color-mix(in oklab,var(--river) 16%, transparent)}
+.sky{display:flex; gap:11px; align-items:baseline; padding:9px 0; border-top:1px dashed var(--border)}
+.sky:first-child{border-top:0} .sky .when{min-width:96px; font-weight:800; color:var(--accent3); font-size:13px}
+.sky .what{flex:1} .sky .where{font-size:11.5px; color:var(--muted)}
 
 /* tiles / cards */
 .cardgrid{display:grid; grid-template-columns:repeat(auto-fill,minmax(232px,1fr)); gap:14px}
@@ -171,9 +187,18 @@ body{margin:0; color:var(--fg); overflow-x:hidden; background:var(--bg);
 .tile:hover{transform:translateY(-2px); border-color:color-mix(in oklab,var(--clay) 38%, var(--border))}
 .tile h3{margin:0 0 4px; font-size:16px}
 .price{font-weight:900; color:var(--clay-bright)}
-.catbar{display:flex; gap:7px; flex-wrap:wrap; margin-bottom:14px}
-.cat{border:1px solid var(--border); background:transparent; color:var(--muted); border-radius:999px; padding:6px 13px; font-weight:800; cursor:pointer; font-size:12.5px}
+.ttag{font-size:11px; padding:3px 8px; border-radius:999px; border:1px solid var(--border); background:color-mix(in oklab,var(--sage) 16%, transparent); color:var(--fg)}
+
+/* filter bars */
+.tabrow{display:flex; gap:7px; flex-wrap:wrap; margin-bottom:12px; overflow-x:auto; scrollbar-width:none}
+.tabrow::-webkit-scrollbar{display:none}
+.cat{border:1px solid var(--border); background:transparent; color:var(--muted); border-radius:999px; padding:6px 13px; font-weight:800; cursor:pointer; font-size:12.5px; white-space:nowrap}
 .cat[aria-pressed="true"]{color:#fff; background:linear-gradient(135deg,var(--clay-bright),var(--clay-deep)); border-color:transparent}
+.chiprow{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px}
+.chip{border:1px solid var(--border); background:transparent; color:var(--muted); border-radius:8px; padding:5px 10px; font-weight:700; cursor:pointer; font-size:12px}
+.chip[aria-pressed="true"]{color:var(--fg); background:color-mix(in oklab,var(--river) 22%, transparent); border-color:color-mix(in oklab,var(--river) 45%, var(--border))}
+.search{display:flex; align-items:center; gap:8px; border:1px solid var(--border); border-radius:11px; padding:8px 12px; margin-bottom:14px; background:color-mix(in oklab,var(--bg) 50%, transparent)}
+.search input{flex:1; border:0; background:transparent; color:var(--fg); outline:none; font:inherit}
 
 /* transit / rideshare */
 .routebar{display:flex; align-items:center; gap:11px; padding:11px 13px; border:1px solid var(--border); border-radius:12px; margin-bottom:9px}
@@ -183,22 +208,45 @@ body{margin:0; color:var(--fg); overflow-x:hidden; background:var(--bg);
 .gtimes .col{border:1px solid var(--border); border-radius:12px; padding:11px 13px}
 .gtimes .t{display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px dashed var(--border); font-variant-numeric:tabular-nums}
 .gtimes .t:last-child{border-bottom:0}
-.ride{display:grid; grid-template-columns:54px 1fr auto; gap:12px; align-items:center; padding:13px 14px; border:1px solid var(--border); border-radius:13px; margin-bottom:10px}
+.ride{display:grid; grid-template-columns:62px 1fr auto; gap:12px; align-items:center; padding:13px 14px; border:1px solid var(--border); border-radius:13px; margin-bottom:10px}
 .ride .when{text-align:center; border-right:1px solid var(--border); padding-right:10px}
 .ride .when b{display:block; font-size:15px; color:var(--accent1)} .ride .when span{font-size:11px; color:var(--muted)}
 .ride .what b{font-size:14.5px} .ride .seats{font-size:12px; color:var(--muted)}
+
+/* profile */
+.phead{display:flex; gap:18px; align-items:center; flex-wrap:wrap}
+.bigavi{width:100px; height:100px; border-radius:26px; position:relative; flex:none}
+.bigavi .editpic{position:absolute; right:-6px; bottom:-6px; width:34px; height:34px; border-radius:50%; border:2px solid var(--term);
+  background:linear-gradient(135deg,var(--clay-bright),var(--clay-deep)); color:#fff; display:grid; place-items:center; cursor:pointer; font-size:15px}
+.phead .pmeta{min-width:0; flex:1}
+.bio{margin-top:10px; color:var(--fg); font-size:14px; line-height:1.55}
+.pgrid{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px}
+.photo{border:1px solid var(--border); border-radius:13px; overflow:hidden; background:var(--term)}
+.photo .img{aspect-ratio:1/1; background-size:cover; background-position:center; cursor:zoom-in}
+.photo .pcap{padding:7px 10px 0; font-size:12.5px}
+.photo .reacts{padding:6px 10px 9px; margin-top:4px}
+.addphoto{border:2px dashed var(--border); border-radius:13px; display:grid; place-items:center; min-height:120px; cursor:pointer; color:var(--muted); font-weight:800; text-align:center}
+.addphoto:hover{border-color:color-mix(in oklab,var(--clay) 50%, var(--border)); color:var(--fg)}
+.frow{display:grid; grid-template-columns:46px 1fr auto; gap:11px; align-items:center; padding:11px 0; border-top:1px solid var(--border)}
+.frow:first-child{border-top:0}
+.frow .avi{width:46px; height:46px}
+.pkcard{border:1px solid var(--border); border-radius:13px; padding:13px 14px; margin-bottom:10px}
+.pkcard h4{margin:0 0 3px; font-size:15px}
+.pkcard .pkmeta{font-size:12px; color:var(--muted); margin-bottom:6px}
 
 /* messages */
 .msgwrap{display:grid; grid-template-columns:300px 1fr; min-height:560px}
 @media(max-width:760px){ .msgwrap{grid-template-columns:1fr} .msgwrap.thread-open .convlist{display:none} .msgwrap:not(.thread-open) .thread{display:none} }
 .convlist{border-right:1px solid var(--border); overflow:auto; max-height:64vh}
 .conv{display:grid; grid-template-columns:42px 1fr auto; gap:10px; align-items:center; padding:12px 14px; border-bottom:1px solid var(--border); cursor:pointer}
+.conv .avi{width:42px; height:42px; font-size:14px}
 .conv:hover{background:color-mix(in oklab,var(--clay) 9%, transparent)}
 .conv[aria-selected="true"]{background:color-mix(in oklab,var(--clay) 14%, transparent)}
 .conv .cn{font-weight:800; font-size:14px} .conv .cp{font-size:12px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:150px}
 .conv .un{width:9px; height:9px; border-radius:50%; background:var(--clay-bright)}
 .thread{display:flex; flex-direction:column; max-height:64vh}
 .thread .thead{display:flex; align-items:center; gap:11px; padding:12px 15px; border-bottom:1px solid var(--border)}
+.thread .thead .avi{width:38px; height:38px; font-size:14px}
 .thread .tbody{flex:1; overflow:auto; padding:14px 15px; display:flex; flex-direction:column; gap:9px}
 .bubble{max-width:76%; padding:9px 12px; border-radius:14px; font-size:14px; line-height:1.45; word-break:break-word}
 .bubble.them{align-self:flex-start; background:color-mix(in oklab,var(--term) 70%, var(--fg) 4%); border:1px solid var(--border); border-bottom-left-radius:5px}
@@ -208,15 +256,20 @@ body{margin:0; color:var(--fg); overflow-x:hidden; background:var(--bg);
 .tcompose input{flex:1; border:1px solid var(--border); background:color-mix(in oklab,var(--bg) 50%, transparent); color:var(--fg); border-radius:11px; padding:10px 13px; outline:none; font:inherit}
 .empty{display:grid; place-items:center; height:100%; color:var(--muted); text-align:center; padding:30px}
 
-/* profile form */
+/* forms */
 .field{display:grid; gap:6px; margin-bottom:12px}
 .field label{font-size:12px; font-weight:800; color:var(--muted); letter-spacing:.04em}
 .field input,.field select{border:1px solid var(--border); background:color-mix(in oklab,var(--bg) 50%, transparent); color:var(--fg); border-radius:11px; padding:10px 12px; font:inherit; outline:none}
-.field input:focus,.field select:focus{border-color:color-mix(in oklab,var(--clay) 55%, var(--border))}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:color-mix(in oklab,var(--clay) 55%, var(--border))}
 .grid2{display:grid; grid-template-columns:1fr 1fr; gap:12px}
 @media(max-width:560px){ .grid2{grid-template-columns:1fr} }
 
-/* command palette */
+/* lightbox */
+.lightbox{position:fixed; inset:0; background:rgba(5,6,9,.86); z-index:90; display:none; place-items:center; padding:24px; cursor:zoom-out}
+.lightbox.open{display:grid}
+.lightbox img{max-width:94vw; max-height:90vh; border-radius:14px; box-shadow:0 30px 80px rgba(0,0,0,.6)}
+
+/* palette */
 .palette{position:fixed; inset:0; display:grid; place-items:start center; padding-top:14vh; background:rgba(8,9,13,.5);
   backdrop-filter:blur(8px); z-index:80; opacity:0; pointer-events:none; transition:.15s}
 .palette.open{opacity:1; pointer-events:auto}
@@ -242,7 +295,10 @@ footer b{color:var(--fg)}
   .strip{top:56px; gap:13px; padding:6px 12px; font-size:12px}
   .main{padding:104px 11px 84px}
   .cardgrid{grid-template-columns:1fr} .gtimes{grid-template-columns:1fr}
-  .ride{grid-template-columns:54px 1fr; } .ride .seats-btn{grid-column:1/-1}
+  .ride{grid-template-columns:62px 1fr} .ride .seats-btn{grid-column:1/-1}
+  .pgrid{grid-template-columns:repeat(2,1fr); gap:9px}
+  .bigavi{width:84px; height:84px; border-radius:22px}
+  .seg{margin-left:0}
 }
 @media(prefers-reduced-motion:reduce){ *{animation:none!important; transition:none!important} }
 </style>
@@ -289,20 +345,29 @@ footer b{color:var(--fg)}
       <aside class="panel">
         <header><span class="badge"><span class="spark"></span> YOU</span> Your canyon profile</header>
         <div class="body">
-          <div class="who"><div class="avi" id="meAvi"></div><div><div class="name" id="meName"></div><div class="role" id="meRole"></div></div></div>
+          <div class="who"><div class="avi" id="meAvi" style="width:50px;height:50px;border-radius:13px"></div><div><div class="name" id="meName"></div><div class="role" id="meRole"></div></div></div>
           <div class="kv"><span>Company</span><strong id="meCo"></strong></div>
           <div class="kv"><span>Job</span><strong id="meJob"></strong></div>
           <div class="kv"><span>Housing</span><strong id="meHouse"></strong></div>
-          <div class="kv"><span>Status</span><strong class="tag on" id="meStatus"></strong></div>
-          <div class="stat3"><div><b id="stPosts">0</b><span class="small">posts</span></div><div><b id="stListings">0</b><span class="small">listings</span></div><div><b id="stRides">0</b><span class="small">rides</span></div></div>
-          <button class="btn sm" style="margin-top:12px; width:100%" data-goto="profile">Edit profile →</button>
+          <div class="stat4">
+            <div><b id="stPosts">0</b><span class="small">posts</span></div>
+            <div><b id="stFriends">0</b><span class="small">friends</span></div>
+            <div><b id="stPhotos">0</b><span class="small">photos</span></div>
+            <div><b id="stListings">0</b><span class="small">listings</span></div>
+          </div>
+          <button class="btn sm" style="margin-top:12px; width:100%" data-goto="profile">Open your profile →</button>
         </div>
       </aside>
-      <!-- Pinned NPS / park alerts -->
+      <!-- Pinned NPS park alerts -->
       <aside class="panel">
         <header><span class="badge"><span class="spark"></span> 📌 PINNED</span> Park alerts <span class="demo-pill">NPS feed</span></header>
         <div class="body" id="parkAlerts"></div>
-        <div class="body small" style="border-top:1px solid var(--border); color:var(--muted)">Auto-pulled from the NPS park feed — kept current, always visible.</div>
+      </aside>
+      <!-- Sky Party schedule -->
+      <aside class="panel">
+        <header><span class="badge"><span class="spark"></span> 🔭 SKY PARTY</span> Night sky programs <span class="demo-pill">NPS</span></header>
+        <div class="body" id="skyParty"></div>
+        <div class="body small" style="border-top:1px solid var(--border)">Grand Canyon Star Party &amp; ranger night-sky talks. Dark skies — give your eyes 20 min to adjust.</div>
       </aside>
     </div>
 
@@ -323,7 +388,9 @@ footer b{color:var(--fg)}
         </div>
       </article>
       <article class="panel reveal">
-        <header><span class="badge"><span class="spark"></span> FEED</span> The Rim — community feed <span class="demo-pill">sample posts</span></header>
+        <header><span class="badge"><span class="spark"></span> FEED</span> The Rim
+          <span class="seg" id="feedSeg"><button data-f="all" aria-pressed="true">All</button><button data-f="friends" aria-pressed="false">Friends</button></span>
+        </header>
         <div id="feed"></div>
       </article>
     </section>
@@ -344,7 +411,6 @@ footer b{color:var(--fg)}
         <div class="wtitle">Getting around</div>
         <div class="kv"><span>Park buses (NPS)</span><strong style="color:var(--ok)">4 routes</strong></div>
         <div class="kv"><span>Ride share posts</span><strong id="wRides">—</strong></div>
-        <div class="kv"><span>Groome → Flagstaff</span><strong>3×/day</strong></div>
         <button class="btn sm" style="margin-top:10px; width:100%" data-goto="transit">Open transit &amp; rides →</button>
       </div>
       <div class="widget">
@@ -364,7 +430,6 @@ footer b{color:var(--fg)}
         <div id="parkBuses"></div>
       </div>
     </article>
-
     <article class="panel reveal">
       <header><span class="badge"><span class="spark"></span> 🚗 RIDE SHARE</span> Neighbors going your way <span class="demo-pill">community</span></header>
       <div class="body">
@@ -381,7 +446,13 @@ footer b{color:var(--fg)}
         <div id="rides"></div>
       </div>
     </article>
-
+    <article class="panel reveal">
+      <header><span class="badge"><span class="spark"></span> SHUTTLES</span> Employer shuttles <span class="demo-pill">schedules pending</span></header>
+      <div class="body">
+        <p class="small" style="margin-top:0">DNC &amp; Xanterra staff shuttle times will drop in here once Lee sends them — housing ↔ work locations.</p>
+        <div id="empShuttle"></div>
+      </div>
+    </article>
     <article class="panel reveal">
       <header><span class="badge"><span class="spark"></span> GROOME</span> Groome Transportation → Flagstaff <span class="demo-pill">live web schedule</span></header>
       <div class="body">
@@ -402,17 +473,18 @@ footer b{color:var(--fg)}
       <div class="body">
         <div class="composer" style="margin-bottom:16px">
           <div class="grid2">
-            <div class="field" style="margin:0"><label>Title</label><input id="mkTitle" placeholder="Mini fridge, yard sale, ISO winter boots…" /></div>
+            <div class="field" style="margin:0"><label>Title</label><input id="mkTitle" placeholder="Mini fridge, 2009 Outback, ISO winter boots…" /></div>
             <div class="field" style="margin:0"><label>Price / detail</label><input id="mkPrice" placeholder="$40 · Free · Sat 8am" /></div>
           </div>
-          <div class="row">
-            <div class="field" style="margin:0; flex:1; min-width:160px"><label>Category</label>
-              <select id="mkCat"><option>For sale</option><option>Wanted</option><option>Free</option><option>Yard sale</option><option>Announcement</option></select>
-            </div>
-            <button class="btn primary" id="mkPost" style="align-self:end">Post listing</button>
+          <div class="field" style="margin-bottom:10px"><label>Type</label>
+            <select id="mkType"><option>For sale</option><option>ISO</option><option>Events</option><option>Announcements</option><option>Free</option><option>Yard sale</option></select>
           </div>
+          <div class="field" style="margin-bottom:10px"><label>Tags <span style="font-weight:600;text-transform:none;letter-spacing:0">(pick any)</span></label><div class="chiprow" id="mkNewTags"></div></div>
+          <div class="row"><span class="small">Listings are saved on this device.</span><button class="btn primary" id="mkPost">Post listing</button></div>
         </div>
-        <div class="catbar" id="catbar"></div>
+        <div class="tabrow" id="typeRow"></div>
+        <div class="search"><span>🔎</span><input id="mkSearch" placeholder="Search listings — bike, laptop, jacket…" aria-label="Search listings" /></div>
+        <div class="chiprow" id="tagRow"></div>
         <div class="cardgrid" id="market"></div>
       </div>
     </article>
@@ -425,8 +497,8 @@ footer b{color:var(--fg)}
       <div class="msgwrap" id="msgwrap">
         <div class="convlist" id="convlist"></div>
         <div class="thread" id="thread">
-          <div class="empty" id="threadEmpty">Pick a conversation, or hit <b style="margin:0 5px">Message</b> on any post, listing or ride to start one.</div>
-          <div class="thead" id="thead" style="display:none"><div class="avi" id="thAvi" style="width:38px;height:38px;font-size:14px"></div><div><div class="cn" id="thName" style="font-weight:900"></div><div class="small" id="thSub"></div></div><span class="spacer"></span><button class="btn sm" id="thBack" style="display:none">←</button></div>
+          <div class="empty" id="threadEmpty">Pick a conversation, or hit <b style="margin:0 5px">Message</b> on any post, listing, ride or friend to start one.</div>
+          <div class="thead" id="thead" style="display:none"><div class="avi" id="thAvi"></div><div><div class="cn" id="thName" style="font-weight:900"></div><div class="small" id="thSub"></div></div><span class="spacer"></span><button class="btn sm" id="thBack">←</button></div>
           <div class="tbody" id="tbody" style="display:none"></div>
           <form class="tcompose" id="tcompose" style="display:none"><input id="tinput" placeholder="Write a message…" autocomplete="off" /><button class="btn primary" type="submit">Send</button></form>
         </div>
@@ -436,34 +508,93 @@ footer b{color:var(--fg)}
 
   <!-- ============ PROFILE ============ -->
   <div class="view" id="view-profile">
-    <article class="panel reveal" style="max-width:680px; margin:0 auto; width:100%">
-      <header><span class="badge"><span class="spark"></span> PROFILE</span> Who you are around the canyon</header>
-      <div class="body">
-        <p class="small" style="margin-top:0">Your profile shows neighbors which <b>company</b> you work for and your <b>job</b>. Employee <b>housing</b> is optional — share it only if you want. Saved on this device.</p>
-        <div class="grid2">
-          <div class="field"><label>Display name</label><input id="pfName" placeholder="e.g. Mara K." /></div>
-          <div class="field"><label>Handle</label><input id="pfHandle" placeholder="yourhandle" /></div>
+    <div style="display:grid; gap:16px; max-width:860px; margin:0 auto; width:100%">
+      <!-- header -->
+      <article class="panel reveal">
+        <div class="body">
+          <div class="phead">
+            <div class="bigavi avi" id="pfAvi"><button class="editpic" id="pfPicBtn" title="Change photo">✎</button></div>
+            <div class="pmeta">
+              <div class="name" id="pfHeadName" style="font-size:22px"></div>
+              <div class="role" id="pfHeadHandle"></div>
+              <div class="chips" id="pfHeadTags"></div>
+              <div class="bio" id="pfHeadBio"></div>
+            </div>
+          </div>
+          <div class="stat4" style="margin-top:14px">
+            <div><b id="stPosts2">0</b><span class="small">posts</span></div>
+            <div><b id="stFriends2">0</b><span class="small">friends</span></div>
+            <div><b id="stPhotos2">0</b><span class="small">photos</span></div>
+            <div><b id="stParks2">0</b><span class="small">parks</span></div>
+          </div>
+          <input type="file" id="pfPicInput" accept="image/*" hidden />
         </div>
-        <div class="grid2">
-          <div class="field"><label>Company / employer</label><select id="pfCo"></select></div>
-          <div class="field"><label>Job title</label><input id="pfJob" placeholder="e.g. Front desk, Line cook, Guide" /></div>
+      </article>
+
+      <!-- edit details -->
+      <article class="panel reveal">
+        <header><span class="badge"><span class="spark"></span> EDIT</span> Profile details</header>
+        <div class="body">
+          <div class="grid2">
+            <div class="field"><label>Display name</label><input id="pfName" placeholder="e.g. Mara K." /></div>
+            <div class="field"><label>Handle</label><input id="pfHandle" placeholder="yourhandle" /></div>
+          </div>
+          <div class="grid2">
+            <div class="field"><label>Company / employer</label><select id="pfCo"></select></div>
+            <div class="field"><label>Job title</label><input id="pfJob" placeholder="e.g. Front desk, Line cook, Guide" /></div>
+          </div>
+          <div class="grid2">
+            <div class="field"><label>Employee housing <span style="font-weight:600;text-transform:none;letter-spacing:0">(optional)</span></label><select id="pfHouse"></select></div>
+            <div class="field"><label>Status</label><input id="pfStatus" placeholder="On the rim, Off today, New here…" /></div>
+          </div>
+          <div class="field"><label>Bio</label><textarea id="pfBio" placeholder="A line or two about you — where you work, what you're into around the canyon."></textarea></div>
+          <div style="display:flex; gap:10px; align-items:center"><button class="btn primary" id="pfSave">Save profile</button><span class="small" id="pfSaved"></span></div>
         </div>
-        <div class="grid2">
-          <div class="field"><label>Employee housing <span style="font-weight:600; text-transform:none; letter-spacing:0">(optional)</span></label><select id="pfHouse"></select></div>
-          <div class="field"><label>Status</label><input id="pfStatus" placeholder="On the rim, Off today, New here…" /></div>
+      </article>
+
+      <!-- photos -->
+      <article class="panel reveal">
+        <header><span class="badge"><span class="spark"></span> 📸 PHOTOS</span> Your gallery</header>
+        <div class="body">
+          <div class="pgrid" id="photoGrid"></div>
+          <input type="file" id="photoInput" accept="image/*" hidden />
         </div>
-        <div style="display:flex; gap:10px; align-items:center; margin-top:6px">
-          <button class="btn primary" id="pfSave">Save profile</button>
-          <span class="small" id="pfSaved"></span>
+      </article>
+
+      <!-- park experience -->
+      <article class="panel reveal">
+        <header><span class="badge"><span class="spark"></span> 🏞️ PARK EXPERIENCE</span> Other parks you've worked</header>
+        <div class="body">
+          <div class="grid2">
+            <div class="field" style="margin:0"><label>Park / location</label><input id="pkPark" placeholder="Yellowstone, Zion, Denali…" /></div>
+            <div class="field" style="margin:0"><label>Role</label><input id="pkRole" placeholder="Server, Guide, Ranger…" /></div>
+          </div>
+          <div class="grid2">
+            <div class="field"><label>Years</label><input id="pkYears" placeholder="2022–2023" /></div>
+            <div class="field" style="display:grid; align-content:end"><label>&nbsp;</label><button class="btn primary" id="pkAdd">Add experience</button></div>
+          </div>
+          <div class="field"><label>Short review</label><textarea id="pkReview" placeholder="What was it like? Worth it? Tips for someone heading there."></textarea></div>
+          <div id="parkExp" style="margin-top:6px"></div>
         </div>
-      </div>
-    </article>
+      </article>
+
+      <!-- friends -->
+      <article class="panel reveal">
+        <header><span class="badge"><span class="spark"></span> 👥 FRIENDS</span> Your canyon circle</header>
+        <div class="body">
+          <div class="wtitle">Friends (<span id="friendCount">0</span>)</div>
+          <div id="friendList"></div>
+          <div class="wtitle" style="margin-top:16px">People you may know</div>
+          <div id="suggestions"></div>
+        </div>
+      </article>
+    </div>
   </div>
 </main>
 
 <footer>
   <b>CanyonSoc</b> · an independent community network for the people who live and work around the <b>Grand Canyon</b>. Not affiliated with any single concessioner or the NPS.
-  <br>Live weather &amp; NWS alerts are real (public APIs, no key). Feed, marketplace, rides &amp; messages are sample/local — ready to wire to a backend.
+  <br>Live weather &amp; NWS alerts are real (public APIs, no key). Profiles, photos, friends, feed, marketplace, rides &amp; messages are sample/local — ready to wire to a backend.
   Toggle <span class="kbd">T</span> day/night · <span class="kbd">⌘/Ctrl K</span> palette.
 </footer>
 
@@ -475,69 +606,58 @@ footer b{color:var(--fg)}
 <div class="palette" id="palette" aria-hidden="true">
   <div class="panel"><input id="palInput" placeholder="Jump to: home, transit, marketplace, messages, profile · night/day…" aria-label="Command" /><div id="palResults"></div></div>
 </div>
+<div class="lightbox" id="lightbox"><img id="lightboxImg" alt="" /></div>
 
 <script>
 /* ================= WebGL canyon background ================= */
 (function canyonGL(){
   const cv=document.getElementById('gl');
   let gl; try{ gl=cv.getContext('webgl',{antialias:true,alpha:false,powerPreference:'low-power'}); }catch(e){}
-  if(!gl){ cv.style.display='none'; return; } // CSS fallback already painted
-  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-
+  if(!gl){ cv.style.display='none'; return; }
+  const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
   const vs=`attribute vec2 p; void main(){ gl_Position=vec4(p,0.0,1.0); }`;
-  const fs=`
-  precision highp float;
-  uniform vec2 u_res; uniform float u_time; uniform float u_theme;
+  const fs=`precision highp float; uniform vec2 u_res; uniform float u_time; uniform float u_theme;
   float hash(float n){ return fract(sin(n)*43758.5453123); }
   float noise(float x){ float i=floor(x),f=fract(x); float u=f*f*(3.0-2.0*f); return mix(hash(i),hash(i+1.0),u); }
   float fbm(float x){ float v=0.0,a=0.5; for(int i=0;i<5;i++){ v+=a*noise(x); x*=2.0; a*=0.5; } return v; }
   void main(){
-    vec2 uv = gl_FragCoord.xy/u_res; float asp=u_res.x/u_res.y;
-    /* sky */
-    vec3 skyTop = mix(vec3(0.043,0.055,0.094), vec3(0.83,0.88,0.95), u_theme);
-    vec3 skyHor = mix(vec3(0.26,0.17,0.20), vec3(0.99,0.92,0.83), u_theme);
-    vec3 col = mix(skyHor, skyTop, smoothstep(0.28,1.0,uv.y));
-    /* sun */
+    vec2 uv=gl_FragCoord.xy/u_res; float asp=u_res.x/u_res.y;
+    vec3 skyTop=mix(vec3(0.043,0.055,0.094),vec3(0.83,0.88,0.95),u_theme);
+    vec3 skyHor=mix(vec3(0.26,0.17,0.20),vec3(0.99,0.92,0.83),u_theme);
+    vec3 col=mix(skyHor,skyTop,smoothstep(0.28,1.0,uv.y));
     vec2 sun=vec2(0.72,0.66); float d=distance(vec2(uv.x*asp,uv.y),vec2(sun.x*asp,sun.y));
-    vec3 sunC = mix(vec3(1.0,0.66,0.36), vec3(1.0,0.85,0.62), u_theme);
-    col += sunC*(0.50*exp(-d*6.5)+0.16*exp(-d*1.9));
-    /* canyon ridge layers, far -> near */
-    for(int i=0;i<5;i++){
-      float fi=float(i);
+    vec3 sunC=mix(vec3(1.0,0.66,0.36),vec3(1.0,0.85,0.62),u_theme);
+    col+=sunC*(0.50*exp(-d*6.5)+0.16*exp(-d*1.9));
+    for(int i=0;i<5;i++){ float fi=float(i);
       float base=0.50-fi*0.083, amp=0.045+fi*0.020, freq=2.4+fi*2.3, spd=0.010+fi*0.006;
       float h=base+amp*(fbm(uv.x*freq+u_time*spd+fi*11.0)-0.5)*2.0;
       float m=smoothstep(0.004,0.0,uv.y-h);
       vec3 far=vec3(0.34,0.23,0.27), near=vec3(0.20,0.10,0.07);
       vec3 rc=mix(far,near,fi/4.0);
-      rc=mix(rc, mix(vec3(0.86,0.72,0.55),vec3(0.62,0.40,0.24),fi/4.0), u_theme);
-      col=mix(col,rc,m);
-    }
-    /* perspective grid on the canyon floor */
+      rc=mix(rc,mix(vec3(0.86,0.72,0.55),vec3(0.62,0.40,0.24),fi/4.0),u_theme);
+      col=mix(col,rc,m); }
     float band=smoothstep(0.20,0.05,uv.y);
-    if(band>0.001){
-      float yy=clamp(uv.y/0.20,0.0,1.0); float depth=1.0/(yy+0.05);
+    if(band>0.001){ float yy=clamp(uv.y/0.20,0.0,1.0); float depth=1.0/(yy+0.05);
       float gx=(uv.x-0.5)*depth*9.0; float gz=depth*2.2-u_time*0.22;
       float lx=abs(fract(gx)-0.5), lz=abs(fract(gz)-0.5);
       float line=smoothstep(0.47,0.5,max(lx,lz));
       vec3 gc=mix(vec3(0.90,0.50,0.30),vec3(0.30,0.20,0.14),u_theme);
-      col=mix(col, mix(col,gc,0.55), line*band*0.55);
-    }
-    /* vignette + subtle dither */
+      col=mix(col,mix(col,gc,0.55),line*band*0.55); }
     float vig=smoothstep(1.25,0.42,distance(uv,vec2(0.5,0.55))); col*=mix(0.80,1.0,vig);
-    col += (hash(gl_FragCoord.x*1.3+gl_FragCoord.y*811.0+u_time)-0.5)*0.014;
+    col+=(hash(gl_FragCoord.x*1.3+gl_FragCoord.y*811.0+u_time)-0.5)*0.014;
     gl_FragColor=vec4(col,1.0);
   }`;
-  function sh(type,src){ const s=gl.createShader(type); gl.shaderSource(s,src); gl.compileShader(s);
-    if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)){ console.warn(gl.getShaderInfoLog(s)); return null; } return s; }
+  function sh(t,s){ const o=gl.createShader(t); gl.shaderSource(o,s); gl.compileShader(o);
+    if(!gl.getShaderParameter(o,gl.COMPILE_STATUS)){ console.warn(gl.getShaderInfoLog(o)); return null; } return o; }
   const vsh=sh(gl.VERTEX_SHADER,vs), fsh=sh(gl.FRAGMENT_SHADER,fs);
   if(!vsh||!fsh){ cv.style.display='none'; return; }
   const prog=gl.createProgram(); gl.attachShader(prog,vsh); gl.attachShader(prog,fsh); gl.linkProgram(prog);
   if(!gl.getProgramParameter(prog,gl.LINK_STATUS)){ cv.style.display='none'; return; }
   gl.useProgram(prog);
   const buf=gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER,buf);
-  gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1, 3,-1, -1,3]),gl.STATIC_DRAW);
+  gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,3,-1,-1,3]),gl.STATIC_DRAW);
   const loc=gl.getAttribLocation(prog,'p'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
-  const uRes=gl.getUniformLocation(prog,'u_res'), uTime=gl.getUniformLocation(prog,'u_time'), uTheme=gl.getUniformLocation(prog,'u_theme');
+  const uRes=gl.getUniformLocation(prog,'u_res'),uTime=gl.getUniformLocation(prog,'u_time'),uTheme=gl.getUniformLocation(prog,'u_theme');
   function themeVal(){ return document.documentElement.getAttribute('data-theme')==='day'?1.0:0.0; }
   function size(){ const dpr=Math.min(devicePixelRatio||1,1.5); cv.width=Math.floor(innerWidth*dpr); cv.height=Math.floor(innerHeight*dpr); gl.viewport(0,0,cv.width,cv.height); }
   size(); addEventListener('resize',size,{passive:true});
@@ -547,69 +667,64 @@ footer b{color:var(--fg)}
   if(reduce){ draw(8.0); window.__canyonRedraw=()=>draw(8.0); } else requestAnimationFrame(loop);
 })();
 
-/* ================= storage helpers ================= */
-const LS={ get(k,d){ try{ const v=localStorage.getItem(k); return v?JSON.parse(v):d; }catch(e){ return d; } }, set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} } };
+/* ================= helpers / storage ================= */
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const esc=s=>(''+s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const LS={ get(k,d){ try{ const v=localStorage.getItem(k); return v?JSON.parse(v):d; }catch(e){ return d; } },
+  set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); return true; }catch(e){ alert('Storage is full — remove a photo or two and try again.'); return false; } } };
 const COMPANIES=["Delaware North","Xanterra","National Park Service","Grand Canyon Conservancy","Aramark","Forever Resorts","Hualapai Tribe","Grand Canyon Airlines","Papillon","Self-employed / Other"];
 const HOUSING=["—","Victor Hall","Colter Hall","Maswik Dorms","Trailer Village","Albright (NPS)","Grand Canyon Village","Tusayan","Off-site / Other","Prefer not to say"];
 const COLORS=["#c9612f","#0f7c70","#6d4d7a","#86a06f","#dca54a","#2bb8a3","#8f3c1c"];
-const coColor=c=>COLORS[(Math.abs([...(''+c)].reduce((a,ch)=>a+ch.charCodeAt(0),0)))%COLORS.length];
+const coColor=c=>COLORS[Math.abs([...(''+c)].reduce((a,ch)=>a+ch.charCodeAt(0),0))%COLORS.length];
+const ini=h=>(''+h).replace(/[@_]/g,' ').trim().split(' ').slice(0,2).map(w=>w[0]?.toUpperCase()||'').join('');
+const REACTS=['👍','❤️','😂','😮','🔥','🌵'];
 
-/* ================= profile ================= */
-let ME=LS.get('canyonsoc_profile',{name:"You",handle:"you",job:"New here",company:"Self-employed / Other",house:"—",status:"New here"});
-function meInitials(){ return (ME.name||'Y').replace(/[^a-zA-Z ]/g,'').trim().split(' ').slice(0,2).map(w=>w[0]?.toUpperCase()||'').join('')||'Y'; }
-function renderMe(){
-  const c=coColor(ME.company);
-  const a=document.getElementById('meAvi'); a.style.background=`linear-gradient(135deg,${c},color-mix(in oklab,${c} 55%,#000))`; a.textContent=meInitials();
-  document.getElementById('meName').textContent=ME.name; document.getElementById('meRole').textContent='@'+ME.handle;
-  document.getElementById('meCo').innerHTML=`<span class="tag co">${esc(ME.company)}</span>`;
-  document.getElementById('meJob').textContent=ME.job||'—';
-  document.getElementById('meHouse').innerHTML = (ME.house&&ME.house!=='—'&&ME.house!=='Prefer not to say') ? `<span class="tag house">${esc(ME.house)}</span>` : `<span class="small">${esc(ME.house==='Prefer not to say'?'Private':'Not shared')}</span>`;
-  document.getElementById('meStatus').textContent=ME.status||'On the rim';
-  document.getElementById('stListings').textContent=MARKET.filter(m=>m.mine).length;
-  document.getElementById('stRides').textContent=RIDES.filter(r=>r.mine).length;
-}
-function fillSelect(sel,arr,val){ sel.innerHTML=arr.map(o=>`<option ${o===val?'selected':''}>${o}</option>`).join(''); }
-function initProfileForm(){
-  document.getElementById('pfName').value=ME.name; document.getElementById('pfHandle').value=ME.handle;
-  fillSelect(document.getElementById('pfCo'),COMPANIES,ME.company);
-  document.getElementById('pfJob').value=ME.job;
-  fillSelect(document.getElementById('pfHouse'),HOUSING,ME.house);
-  document.getElementById('pfStatus').value=ME.status;
-}
-document.getElementById('pfSave').onclick=()=>{
-  ME={ name:document.getElementById('pfName').value.trim()||'You',
-       handle:(document.getElementById('pfHandle').value.trim()||'you').replace(/[^a-z0-9_]/gi,'').toLowerCase(),
-       company:document.getElementById('pfCo').value, job:document.getElementById('pfJob').value.trim()||'—',
-       house:document.getElementById('pfHouse').value, status:document.getElementById('pfStatus').value.trim()||'On the rim' };
-  LS.set('canyonsoc_profile',ME); renderMe();
-  const s=document.getElementById('pfSaved'); s.textContent='Saved ✓'; setTimeout(()=>s.textContent='',1800);
+/* people directory (demo) */
+const PEOPLE={
+ mara_k:{name:'Mara K.',co:'Delaware North',job:'Front desk',bio:'Lodging crew at Yavapai. Trail runner, bad at chess.'},
+ trailrunner_lou:{name:'Lou P.',co:'Xanterra',job:'Server',bio:'R2R in a day or bust. Will drive to Flagstaff for tacos.'},
+ sky_t:{name:'Sky T.',co:'National Park Service',job:'Interp Ranger',bio:'Condor nerd. Ask me about the night sky.'},
+ jen_a:{name:'Jen A.',co:'Grand Canyon Conservancy',job:'Retail',bio:'Bookstore + gear. Lost & found wrangler.'},
+ newhire_devon:{name:'Devon R.',co:'Aramark',job:'Line cook',bio:'New to the rim, learning the trails.'},
+ sam_d:{name:'Sam D.',co:'Delaware North',job:'RV Park',bio:'Trailer Village. Two dogs, one truck.'},
 };
+function person(h){ if(h===ME.handle) return {name:ME.name,co:ME.company,job:ME.job,bio:ME.bio,pic:ME.pic}; return PEOPLE[h]||{name:'@'+h,co:'',job:''}; }
+function picFor(h){ if(h===ME.handle) return ME.pic; return (PEOPLE[h]&&PEOPLE[h].pic)||''; }
+function avi(h,co,size,radius){ const c=coColor(co||person(h).co); const p=picFor(h);
+  const st=`width:${size}px;height:${size}px;border-radius:${radius||12}px;`;
+  if(p) return `<div class="avi" style="${st}background-image:url('${p}')"></div>`;
+  return `<div class="avi" style="${st}background:linear-gradient(135deg,${c},color-mix(in oklab,${c} 55%,#000))">${ini('@'+h)}</div>`; }
 
-/* ================= demo data ================= */
-const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
-const esc=s=>(''+s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
-const avi=(t,c)=>`<div class="avi" style="background:linear-gradient(135deg,${c},color-mix(in oklab,${c} 55%,#000))">${t}</div>`;
-const ini=h=>h.replace(/[@_]/g,' ').trim().split(' ').slice(0,2).map(w=>w[0]?.toUpperCase()||'').join('');
-
-let POSTS=[
- {h:"mara_k",co:"Delaware North",job:"Front desk",t:"6m",x:"Killer light on the rim trail right now — if you're off shift, go. 🌄",l:24,r:3,media:1,c:0},
- {h:"trailrunner_lou",co:"Xanterra",job:"Server",t:"22m",x:"Reminder the Backcountry Office line opens 8am for walk-up permits. Got mine for South Kaibab this weekend, lmk if anyone wants to split the rim-to-rim shuttle.",l:17,r:5,media:0,c:1},
- {h:"sky_t",co:"National Park Service",job:"Interp Ranger",t:"1h",x:"Condor 4-7 was perched over Lookout Studio most of the morning. Bring binos. 🦅",l:51,r:8,media:0,c:2},
- {h:"jen_a",co:"Grand Canyon Conservancy",job:"Retail",t:"2h",x:"Found a set of keys with a blue carabiner near Market Plaza. DM me to claim.",l:6,r:1,media:0,c:3},
- {h:"newhire_devon",co:"Aramark",job:"Line cook",t:"3h",x:"First week living up here done. The night sky alone is worth it. Any rec for a cheap used bike?",l:33,r:2,media:0,c:4},
-];
+/* ================= state ================= */
+let ME=LS.get('canyonsoc_profile',{name:"You",handle:"you",job:"New here",company:"Self-employed / Other",house:"—",status:"New here",bio:"",pic:""});
+let FRIENDS=LS.get('canyonsoc_friends',['mara_k','sky_t']);
+let PHOTOS=LS.get('canyonsoc_photos',[]);
+let PARKS=LS.get('canyonsoc_parks',[]);
 let RIDES=LS.get('canyonsoc_rides',[
  {to:"Flagstaff",when:"Fri 5pm",seats:"2 seats · gas split",by:"trailrunner_lou",co:"Xanterra"},
  {to:"Las Vegas",when:"Sat 7am",seats:"3 seats · airport run",by:"jen_a",co:"Grand Canyon Conservancy"},
  {to:"Williams",when:"Sun noon",seats:"1 seat · Safeway run",by:"newhire_devon",co:"Aramark"},
 ]);
+let _pid=1; const nid=()=>'p'+(_pid++);
+let POSTS=[
+ {id:nid(),h:"mara_k",t:"6m",x:"Killer light on the rim trail right now — if you're off shift, go. 🌄",media:1,reacts:{'❤️':12,'🔥':6},mine:[]},
+ {id:nid(),h:"trailrunner_lou",t:"22m",x:"Backcountry Office opens 8am for walk-up permits. Got South Kaibab this weekend — anyone want to split the rim-to-rim shuttle?",media:0,reacts:{'👍':5},mine:[]},
+ {id:nid(),h:"sky_t",t:"1h",x:"Condor 4-7 perched over Lookout Studio all morning. Bring binos. 🦅",media:0,reacts:{'😮':9,'❤️':14},mine:[]},
+ {id:nid(),h:"jen_a",t:"2h",x:"Found a set of keys with a blue carabiner near Market Plaza. DM me to claim.",media:0,reacts:{'👍':3},mine:[]},
+ {id:nid(),h:"newhire_devon",t:"3h",x:"First week living up here done. The night sky alone is worth it. Any rec for a cheap used bike?",media:0,reacts:{'🌵':7,'❤️':4},mine:[]},
+];
+const TYPES=['All','For sale','ISO','Events','Announcements','Free','Yard sale'];
+const TAGS=['Cars','Computers','Clothes','Furniture','Outdoor gear','Bikes','Housing','Tickets','Tools','Appliances','Free stuff','Misc'];
 let MARKET=LS.get('canyonsoc_market',[
- {t:"Mini fridge, works great",p:"$40",cat:"For sale",by:"newhire_devon",co:"Aramark"},
- {t:"Yard sale — Trailer Village #14",p:"Sat 8am–noon",cat:"Yard sale",by:"sam_d",co:"Delaware North"},
- {t:"Osprey Atmos 48L pack",p:"$90",cat:"For sale",by:"mara_k",co:"Delaware North"},
- {t:"ISO winter boots W9",p:"Will buy/trade",cat:"Wanted",by:"trailrunner_lou",co:"Xanterra"},
- {t:"Free firewood — come grab it",p:"Free",cat:"Free",by:"sky_t",co:"National Park Service"},
- {t:"Open mic at the rec center Thurs",p:"7pm · all welcome",cat:"Announcement",by:"jen_a",co:"Grand Canyon Conservancy"},
+ {t:"Mini fridge, works great",p:"$40",type:"For sale",tags:["Appliances"],by:"newhire_devon",co:"Aramark",reacts:{},mine:[]},
+ {t:"2009 Subaru Outback, 150k mi",p:"$4,800",type:"For sale",tags:["Cars"],by:"trailrunner_lou",co:"Xanterra",reacts:{},mine:[]},
+ {t:"Gaming laptop — RTX 3060",p:"$650",type:"For sale",tags:["Computers"],by:"mara_k",co:"Delaware North",reacts:{},mine:[]},
+ {t:"Yard sale — Trailer Village #14",p:"Sat 8am–noon",type:"Yard sale",tags:["Misc","Furniture"],by:"sam_d",co:"Delaware North",reacts:{},mine:[]},
+ {t:"ISO winter boots, women's 9",p:"Will buy/trade",type:"ISO",tags:["Clothes"],by:"trailrunner_lou",co:"Xanterra",reacts:{},mine:[]},
+ {t:"Free firewood — come grab it",p:"Free",type:"Free",tags:["Free stuff","Outdoor gear"],by:"sky_t",co:"National Park Service",reacts:{},mine:[]},
+ {t:"Open mic at the rec center",p:"Thu 7pm · all welcome",type:"Events",tags:["Tickets"],by:"jen_a",co:"Grand Canyon Conservancy",reacts:{},mine:[]},
+ {t:"Trailhead cleanup Saturday",p:"Sat 7am · meet at VC",type:"Announcements",tags:["Misc"],by:"sky_t",co:"National Park Service",reacts:{},mine:[]},
+ {t:"Trek bike, M frame",p:"$220",type:"For sale",tags:["Bikes"],by:"newhire_devon",co:"Aramark",reacts:{},mine:[]},
 ]);
 const PARK_ALERTS=[
  {lvl:"crit",ico:"💧",t:"Stage 2 Water Restrictions in effect",d:"Shorter showers, full loads only — Transcanyon Waterline conservation. (NPS · current)"},
@@ -617,67 +732,189 @@ const PARK_ALERTS=[
  {lvl:"warn",ico:"⛔",t:"North Kaibab Trail closure begins Oct 15",d:"Hard closure to ~Feb 2027 for waterline rehab — route via Bright Angel."},
  {lvl:"info",ico:"🔥",t:"South Rim fire restrictions lifted",d:"Campfires in established rings only — status can change fast in summer."},
 ];
+const SKY_PARTY=[
+ {when:"Tonight · 8:30p",what:"Constellation tour with a ranger",where:"GC Visitor Center plaza"},
+ {when:"Tonight · 9:00p",what:"Telescope viewing — Saturn & the Moon",where:"Behind the Visitor Center"},
+ {when:"Fri · 8:00p",what:"Night-sky photography basics",where:"Mather Point"},
+ {when:"Sat · 9:30p",what:"Milky Way rise — dark-sky walk",where:"Yavapai Point"},
+];
 const PARK_BUSES=[
  {n:"Village (Blue)",color:"#2f6fb0",rt:"Visitor Center ↔ lodges, campgrounds, Market Plaza",hrs:"7:00a–9:00p",st:"Running"},
  {n:"Kaibab / Rim (Orange)",color:"#e08a1e",rt:"Visitor Center ↔ Yaki Point / S. Kaibab Trailhead",hrs:"4:30a–1 hr past sunset",st:"Running"},
  {n:"Hermits Rest (Red)",color:"#c0392b",rt:"Village ↔ Hermits Rest · 7 mi · 9 overlooks",hrs:"Mar 1–Nov 30",st:"Running"},
  {n:"Tusayan (Purple)",color:"#7d4ea3",rt:"Visitor Center ↔ Tusayan gateway",hrs:"Summer only",st:"Seasonal"},
 ];
+const EMP_SHUTTLE=[
+ {w:"DNC — Route A",what:"Staff housing ↔ Yavapai / Market Plaza",by:"schedule pending"},
+ {w:"Xanterra — Route 1",what:"Dorms ↔ historic lodges (El Tovar, Bright Angel)",by:"schedule pending"},
+];
 const GROOME_TOFLAG=[["10:15a","12:00p"],["3:30p","5:15p"],["6:30p","8:15p"]];
 const GROOME_TOGC=[["7:45a","9:15a"],["12:45p","2:30p"],["3:45p","5:30p"]];
 
-/* ================= renderers ================= */
-function postHTML(p){ const c=coColor(p.co); const media=p.media?`<div class="media" style="background:linear-gradient(135deg,${c},color-mix(in oklab,${c} 35%,#000))"></div>`:'';
-  return `<div class="post">${avi(ini('@'+p.h),c)}<div>
-    <div class="handle">@${p.h}<span class="co">${esc(p.co)} · ${esc(p.job)}</span> <span class="meta">· ${p.t}</span></div>
+/* ================= reactions (shared) ================= */
+function reactsHTML(o,kind,id){ if(!o.reacts)o.reacts={}; if(!o.mine)o.mine=[];
+  const summary=Object.entries(o.reacts).filter(([,n])=>n>0).map(([e,n])=>`<button class="rx ${o.mine.includes(e)?'on':''}" data-e="${e}">${e} ${n}</button>`).join('');
+  return `<div class="reacts" data-kind="${kind}" data-id="${id}">${summary}<button class="rx add" data-e="__pick">😊 React</button>
+    <span class="rxpick">${REACTS.map(e=>`<button class="rxopt" data-e="${e}">${e}</button>`).join('')}</span></div>`; }
+function findReactObj(kind,id){ if(kind==='post') return POSTS.find(p=>p.id===id); if(kind==='photo') return PHOTOS.find(p=>p.id===id); if(kind==='market') return MARKET[+id]; return null; }
+function applyReact(kind,id,e){ const o=findReactObj(kind,id); if(!o)return; if(!o.reacts)o.reacts={}; if(!o.mine)o.mine=[];
+  const has=o.mine.includes(e);
+  if(has){ o.mine=o.mine.filter(x=>x!==e); o.reacts[e]=Math.max(0,(o.reacts[e]||1)-1); if(!o.reacts[e])delete o.reacts[e]; }
+  else{ o.mine.push(e); o.reacts[e]=(o.reacts[e]||0)+1; }
+  if(kind==='photo') LS.set('canyonsoc_photos',PHOTOS);
+  if(kind==='market') LS.set('canyonsoc_market',MARKET);
+  if(kind==='post') renderFeed(); else if(kind==='photo') renderPhotos(); else if(kind==='market') renderMarket(); }
+document.addEventListener('click',e=>{
+  const add=e.target.closest('.rx.add'), opt=e.target.closest('.rxopt'), tally=e.target.closest('.rx:not(.add)');
+  if(!e.target.closest('.rxpick')&&!add) $$('.reacts.pick-open').forEach(b=>b.classList.remove('pick-open'));
+  if(add){ add.closest('.reacts').classList.toggle('pick-open'); return; }
+  const el=opt||tally; if(el){ const bar=el.closest('.reacts'); applyReact(bar.dataset.kind,bar.dataset.id,el.dataset.e); }
+});
+
+/* ================= profile ================= */
+function meInitials(){ return ini('@'+(ME.name||'You'))||'Y'; }
+function fillSelect(sel,arr,val){ sel.innerHTML=arr.map(o=>`<option ${o===val?'selected':''}>${esc(o)}</option>`).join(''); }
+function renderMe(){
+  const friends=FRIENDS.length, photos=PHOTOS.length;
+  $('#meAvi').outerHTML=avi(ME.handle,ME.company,50,13).replace('class="avi"','class="avi" id="meAvi"');
+  $('#meName').textContent=ME.name; $('#meRole').textContent='@'+ME.handle;
+  $('#meCo').innerHTML=`<span class="tag co">${esc(ME.company)}</span>`;
+  $('#meJob').textContent=ME.job||'—';
+  $('#meHouse').innerHTML=(ME.house&&ME.house!=='—'&&ME.house!=='Prefer not to say')?`<span class="tag house">${esc(ME.house)}</span>`:`<span class="small">${ME.house==='Prefer not to say'?'Private':'Not shared'}</span>`;
+  const myListings=MARKET.filter(m=>m.by===ME.handle).length, myPosts=POSTS.filter(p=>p.h===ME.handle).length;
+  $('#stPosts').textContent=myPosts; $('#stFriends').textContent=friends; $('#stPhotos').textContent=photos; $('#stListings').textContent=myListings;
+  // profile header
+  $('#pfAvi').style.cssText='width:100px;height:100px;border-radius:26px;'+(ME.pic?`background-image:url('${ME.pic}')`:`background:linear-gradient(135deg,${coColor(ME.company)},color-mix(in oklab,${coColor(ME.company)} 55%,#000))`);
+  $('#pfAvi').innerHTML=(ME.pic?'':meInitials())+'<button class="editpic" id="pfPicBtn" title="Change photo">✎</button>';
+  $('#pfHeadName').textContent=ME.name; $('#pfHeadHandle').textContent='@'+ME.handle+' · '+(ME.status||'On the rim');
+  $('#pfHeadTags').innerHTML=`<span class="tag co">${esc(ME.company)}</span><span class="tag">${esc(ME.job||'—')}</span>`+((ME.house&&ME.house!=='—'&&ME.house!=='Prefer not to say')?`<span class="tag house">${esc(ME.house)}</span>`:'');
+  $('#pfHeadBio').textContent=ME.bio||'No bio yet — add one in Edit below.';
+  $('#stPosts2').textContent=myPosts; $('#stFriends2').textContent=friends; $('#stPhotos2').textContent=photos; $('#stParks2').textContent=PARKS.length;
+}
+function initProfileForm(){
+  $('#pfName').value=ME.name; $('#pfHandle').value=ME.handle;
+  fillSelect($('#pfCo'),COMPANIES,ME.company); $('#pfJob').value=ME.job;
+  fillSelect($('#pfHouse'),HOUSING,ME.house); $('#pfStatus').value=ME.status; $('#pfBio').value=ME.bio||'';
+}
+$('#pfSave').onclick=()=>{
+  ME={...ME, name:$('#pfName').value.trim()||'You',
+    handle:($('#pfHandle').value.trim()||'you').replace(/[^a-z0-9_]/gi,'').toLowerCase(),
+    company:$('#pfCo').value, job:$('#pfJob').value.trim()||'—', house:$('#pfHouse').value,
+    status:$('#pfStatus').value.trim()||'On the rim', bio:$('#pfBio').value.trim()};
+  LS.set('canyonsoc_profile',ME); renderMe(); renderFeed();
+  const s=$('#pfSaved'); s.textContent='Saved ✓'; setTimeout(()=>s.textContent='',1800);
+};
+
+/* image read + downscale */
+function readImage(file,max,cb){ if(!file)return; const r=new FileReader();
+  r.onload=()=>{ const img=new Image(); img.onload=()=>{ let w=img.width,h=img.height; const sc=Math.min(1,max/Math.max(w,h));
+    w=Math.round(w*sc); h=Math.round(h*sc); const c=document.createElement('canvas'); c.width=w; c.height=h;
+    c.getContext('2d').drawImage(img,0,0,w,h); cb(c.toDataURL('image/jpeg',0.82)); }; img.src=r.result; };
+  r.readAsDataURL(file); }
+document.addEventListener('click',e=>{ if(e.target.closest('#pfPicBtn')) $('#pfPicInput').click(); });
+$('#pfPicInput').addEventListener('change',e=>{ readImage(e.target.files[0],320,d=>{ ME.pic=d; LS.set('canyonsoc_profile',ME); renderMe(); renderFeed(); renderConvs(); }); e.target.value=''; });
+
+/* photos */
+function renderPhotos(){ const g=$('#photoGrid');
+  g.innerHTML=PHOTOS.map(ph=>`<div class="photo"><div class="img" data-src="${ph.src}" style="background-image:url('${ph.src}')"></div>
+    ${ph.cap?`<div class="pcap">${esc(ph.cap)}</div>`:''}${reactsHTML(ph,'photo',ph.id)}</div>`).join('')
+    +`<div class="addphoto" id="addPhoto">＋<br>Add photo</div>`;
+}
+document.addEventListener('click',e=>{ if(e.target.closest('#addPhoto')) $('#photoInput').click();
+  const im=e.target.closest('.photo .img'); if(im){ $('#lightboxImg').src=im.dataset.src; $('#lightbox').classList.add('open'); } });
+$('#photoInput').addEventListener('change',e=>{ const f=e.target.files[0]; if(!f)return;
+  readImage(f,640,d=>{ const cap=prompt('Caption (optional):')||''; PHOTOS.unshift({id:nid(),src:d,cap,reacts:{},mine:[]});
+    if(LS.set('canyonsoc_photos',PHOTOS)) renderPhotos(); renderMe(); }); e.target.value=''; });
+$('#lightbox').addEventListener('click',()=>$('#lightbox').classList.remove('open'));
+
+/* park experience */
+function renderParks(){ $('#parkExp').innerHTML=PARKS.map((p,i)=>`<div class="pkcard">
+   <h4>${esc(p.park)} <span class="small" style="font-weight:600">· ${esc(p.role||'')}</span></h4>
+   <div class="pkmeta">${esc(p.years||'')}</div><div>${esc(p.review||'')}</div>
+   <button class="btn ghost sm pkdel" data-i="${i}" style="margin-top:8px">Remove</button></div>`).join('')||'<div class="small">No parks added yet — share where else you have worked.</div>'; }
+$('#pkAdd').onclick=()=>{ const park=$('#pkPark').value.trim(); if(!park){ $('#pkPark').focus(); return; }
+  PARKS.unshift({park,role:$('#pkRole').value.trim(),years:$('#pkYears').value.trim(),review:$('#pkReview').value.trim()});
+  LS.set('canyonsoc_parks',PARKS); $('#pkPark').value=$('#pkRole').value=$('#pkYears').value=$('#pkReview').value='';
+  renderParks(); renderMe(); };
+$('#parkExp').addEventListener('click',e=>{ const b=e.target.closest('.pkdel'); if(!b)return; PARKS.splice(+b.dataset.i,1); LS.set('canyonsoc_parks',PARKS); renderParks(); renderMe(); });
+
+/* friends */
+function renderFriends(){
+  $('#friendCount').textContent=FRIENDS.length;
+  $('#friendList').innerHTML=FRIENDS.map(h=>{ const p=person(h); return `<div class="frow">${avi(h,p.co,46,12)}
+    <div style="min-width:0"><div style="font-weight:800">${esc(p.name)} <span class="small">@${esc(h)}</span></div><div class="small">${esc(p.co)} · ${esc(p.job)}</div></div>
+    <div style="display:flex; gap:6px"><button class="btn sm act-msg" data-h="${esc(h)}" data-co="${esc(p.co)}">✉</button><button class="btn ghost sm unfriend" data-h="${esc(h)}">Remove</button></div></div>`; }).join('')||'<div class="small">No friends yet — add a few below.</div>';
+  const sugg=Object.keys(PEOPLE).filter(h=>!FRIENDS.includes(h)&&h!==ME.handle);
+  $('#suggestions').innerHTML=sugg.map(h=>{ const p=PEOPLE[h]; return `<div class="frow">${avi(h,p.co,46,12)}
+    <div style="min-width:0"><div style="font-weight:800">${esc(p.name)} <span class="small">@${esc(h)}</span></div><div class="small">${esc(p.bio)}</div></div>
+    <button class="btn primary sm addfriend" data-h="${esc(h)}">+ Add</button></div>`; }).join('')||'<div class="small">That is everyone around for now. 🙂</div>';
+}
+document.addEventListener('click',e=>{
+  const a=e.target.closest('.addfriend'); if(a){ if(!FRIENDS.includes(a.dataset.h))FRIENDS.push(a.dataset.h); LS.set('canyonsoc_friends',FRIENDS); renderFriends(); renderMe(); }
+  const u=e.target.closest('.unfriend'); if(u){ FRIENDS=FRIENDS.filter(x=>x!==u.dataset.h); LS.set('canyonsoc_friends',FRIENDS); renderFriends(); renderMe(); if(FEED_FILTER==='friends')renderFeed(); }
+});
+
+/* ================= feed ================= */
+let FEED_FILTER='all';
+function postHTML(p){ const pe=person(p.h); const media=p.media?`<div class="media" style="background:linear-gradient(135deg,${coColor(pe.co)},color-mix(in oklab,${coColor(pe.co)} 35%,#000))"></div>`:'';
+  return `<div class="post">${avi(p.h,pe.co,46,12)}<div>
+    <div class="handle">@${esc(p.h)}<span class="co">${esc(pe.co)} · ${esc(pe.job)}</span> <span class="meta">· ${esc(p.t)}</span></div>
     <div class="text">${esc(p.x)}</div>${media}
-    <div class="actions"><button class="icon-btn act-like">♥ <span>${p.l}</span></button>
-      <button class="icon-btn">🔁 <span>${p.r}</span></button><button class="icon-btn">💬 Reply</button>
-      <button class="icon-btn act-msg" data-h="${p.h}" data-co="${esc(p.co)}">✉ Message</button></div>
+    ${reactsHTML(p,'post',p.id)}
+    <div class="actions"><button class="icon-btn">💬 Reply</button><button class="icon-btn">↗ Share</button>
+      ${p.h!==ME.handle?`<button class="icon-btn act-msg" data-h="${esc(p.h)}" data-co="${esc(pe.co)}">✉ Message</button>`:''}</div>
   </div></div>`; }
-function renderFeed(){ $('#feed').innerHTML=POSTS.map(postHTML).join(''); $('#stPosts').textContent=POSTS.filter(p=>p.mine).length; }
-function renderAlerts(){ $('#parkAlerts').innerHTML=PARK_ALERTS.map(a=>`<div class="pa ${a.lvl}"><div class="paico">${a.ico}</div><div><div class="pat">${esc(a.t)}</div><div class="pad">${esc(a.d)}</div></div></div>`).join(''); }
-function renderBuses(){ $('#parkBuses').innerHTML=PARK_BUSES.map(b=>`<div class="routebar">
-    <span class="dotc" style="background:${b.color};color:${b.color}"></span>
-    <span class="rn">${b.n}</span><span class="rt small">${b.rt}</span>
-    <span class="tag">${b.hrs}</span><strong style="color:${b.st==='Running'?'var(--ok)':'var(--warn)'}">${b.st}</strong></div>`).join('');
-  const row=a=>a.map(t=>`<div class="t"><span>depart <b>${t[0]}</b></span><span>arrive <b>${t[1]}</b></span></div>`).join('');
-  $('#gToFlag').innerHTML=row(GROOME_TOFLAG); $('#gToGC').innerHTML=row(GROOME_TOGC);
-}
-function renderRides(){ $('#rides').innerHTML=RIDES.map(r=>{ const c=coColor(r.co);
-  return `<div class="ride"><div class="when"><b>${esc(r.to)}</b><span>${esc(r.when)}</span></div>
-    <div class="what"><b>@${esc(r.by)}</b> ${r.mine?'<span class="tag" style="margin-left:6px">you</span>':''}<div class="seats">${esc(r.seats)} · ${esc(r.co)}</div></div>
-    <button class="btn sm seats-btn act-msg" data-h="${esc(r.by)}" data-co="${esc(r.co)}" ${r.mine?'disabled':''}>${r.mine?'Posted':'✉ Message'}</button></div>`; }).join('');
-  $('#wRides').textContent=RIDES.length+' active'; renderMe();
-}
-let CAT='All';
-function renderMarket(){ const cats=['All','For sale','Wanted','Free','Yard sale','Announcement'];
-  $('#catbar').innerHTML=cats.map(c=>`<button class="cat" data-cat="${c}" aria-pressed="${c===CAT}">${c}</button>`).join('');
-  const list=CAT==='All'?MARKET:MARKET.filter(m=>m.cat===CAT);
-  $('#market').innerHTML=list.map(m=>{ const c=coColor(m.co);
-    return `<div class="tile"><div style="display:flex;justify-content:space-between;align-items:start;gap:8px"><h3>${esc(m.t)}</h3><span class="tag">${esc(m.cat)}</span></div>
-    <div class="price" style="margin:6px 0">${esc(m.p)}</div>
-    <div class="small">@${esc(m.by)} · <span style="color:${c}">${esc(m.co)}</span></div>
-    <button class="btn sm act-msg" style="margin-top:10px;width:100%" data-h="${esc(m.by)}" data-co="${esc(m.co)}" ${m.mine?'disabled':''}>${m.mine?'Your listing':'✉ Message seller'}</button></div>`; }).join('')||'<div class="small">No listings in this category yet.</div>';
-  $('#wListings').textContent=MARKET.length+' active'; renderMe();
-}
-
-/* ================= interactions: post / ride / market ================= */
+function renderFeed(){ let list=POSTS; if(FEED_FILTER==='friends') list=POSTS.filter(p=>FRIENDS.includes(p.h)||p.h===ME.handle);
+  $('#feed').innerHTML=list.map(postHTML).join('')||'<div class="post"><div></div><div class="small">No posts from friends yet. Add friends on your profile, or switch to All.</div></div>'; }
+$('#feedSeg').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b)return; FEED_FILTER=b.dataset.f;
+  $$('#feedSeg button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.f===FEED_FILTER)); renderFeed(); });
 $('#postBtn').onclick=()=>{ const ta=$('#composer'),t=ta.value.trim(); if(!t)return;
-  POSTS.unshift({h:ME.handle,co:ME.company,job:ME.job,t:'now',x:t,l:0,r:0,media:0,mine:true}); ta.value=''; renderFeed(); };
+  POSTS.unshift({id:nid(),h:ME.handle,t:'now',x:t,media:0,reacts:{},mine:[]}); ta.value=''; renderFeed(); renderMe(); };
 $$('.pill[data-tag]').forEach(p=>p.onclick=()=>{ const ta=$('#composer'); ta.value=(ta.value+' '+p.dataset.tag).trim()+' '; ta.focus(); });
-$('#feed').addEventListener('click',e=>{ const b=e.target.closest('.act-like'); if(!b)return; const s=b.querySelector('span'); const on=b.classList.toggle('liked'); s.textContent=(+s.textContent)+(on?1:-1); });
 
-$('#ridePost').onclick=()=>{ const to=$('#rideTo').value.trim(), when=$('#rideWhen').value.trim(), seats=$('#rideSeats').value.trim();
-  if(!to||!when){ $('#rideTo').focus(); return; }
-  RIDES.unshift({to,when,seats:seats||'open',by:ME.handle,co:ME.company,mine:true}); LS.set('canyonsoc_rides',RIDES);
-  $('#rideTo').value=$('#rideWhen').value=$('#rideSeats').value=''; renderRides(); };
+/* ================= sidebar widgets ================= */
+function renderAlerts(){ $('#parkAlerts').innerHTML=PARK_ALERTS.map(a=>`<div class="pa ${a.lvl}"><div class="paico">${a.ico}</div><div><div class="pat">${esc(a.t)}</div><div class="pad">${esc(a.d)}</div></div></div>`).join(''); }
+function renderSky(){ $('#skyParty').innerHTML=SKY_PARTY.map(s=>`<div class="sky"><span class="when">${esc(s.when)}</span><span class="what">${esc(s.what)}<div class="where">${esc(s.where)}</div></span></div>`).join(''); }
+function renderBuses(){ $('#parkBuses').innerHTML=PARK_BUSES.map(b=>`<div class="routebar"><span class="dotc" style="background:${b.color};color:${b.color}"></span>
+    <span class="rn">${b.n}</span><span class="rt small">${b.rt}</span><span class="tag">${b.hrs}</span><strong style="color:${b.st==='Running'?'var(--ok)':'var(--warn)'}">${b.st}</strong></div>`).join('');
+  $('#empShuttle').innerHTML=EMP_SHUTTLE.map(s=>`<div class="routebar"><span class="dotc" style="background:var(--clay);color:var(--clay)"></span>
+    <span class="rn">${s.w}</span><span class="rt small">${s.what}</span><span class="tag">${s.by}</span></div>`).join('');
+  const row=a=>a.map(t=>`<div class="t"><span>depart <b>${t[0]}</b></span><span>arrive <b>${t[1]}</b></span></div>`).join('');
+  $('#gToFlag').innerHTML=row(GROOME_TOFLAG); $('#gToGC').innerHTML=row(GROOME_TOGC); }
+function renderRides(){ $('#rides').innerHTML=RIDES.map(r=>`<div class="ride"><div class="when"><b>${esc(r.to)}</b><span>${esc(r.when)}</span></div>
+    <div class="what"><b>@${esc(r.by)}</b> ${r.mine?'<span class="tag" style="margin-left:6px">you</span>':''}<div class="seats">${esc(r.seats)} · ${esc(r.co)}</div></div>
+    <button class="btn sm seats-btn act-msg" data-h="${esc(r.by)}" data-co="${esc(r.co)}" ${r.mine?'disabled':''}>${r.mine?'Posted':'✉ Message'}</button></div>`).join('');
+  $('#wRides').textContent=RIDES.length+' active'; }
+$('#ridePost').onclick=()=>{ const to=$('#rideTo').value.trim(),when=$('#rideWhen').value.trim(),seats=$('#rideSeats').value.trim();
+  if(!to||!when){ $('#rideTo').focus(); return; } RIDES.unshift({to,when,seats:seats||'open',by:ME.handle,co:ME.company,mine:true});
+  LS.set('canyonsoc_rides',RIDES); $('#rideTo').value=$('#rideWhen').value=$('#rideSeats').value=''; renderRides(); };
 
-$('#mkPost').onclick=()=>{ const t=$('#mkTitle').value.trim(), p=$('#mkPrice').value.trim(), cat=$('#mkCat').value;
-  if(!t){ $('#mkTitle').focus(); return; }
-  MARKET.unshift({t,p:p||'—',cat,by:ME.handle,co:ME.company,mine:true}); LS.set('canyonsoc_market',MARKET);
-  $('#mkTitle').value=$('#mkPrice').value=''; CAT='All'; renderMarket(); };
-$('#catbar').addEventListener('click',e=>{ const b=e.target.closest('.cat'); if(!b)return; CAT=b.dataset.cat; renderMarket(); });
+/* ================= marketplace ================= */
+let MK_TYPE='All', MK_TAGS=new Set(), MK_Q='', NEW_TAGS=new Set();
+function renderMarket(){
+  $('#typeRow').innerHTML=TYPES.map(t=>`<button class="cat" data-t="${t}" aria-pressed="${t===MK_TYPE}">${t}</button>`).join('');
+  $('#tagRow').innerHTML=TAGS.map(t=>`<button class="chip" data-tag="${t}" aria-pressed="${MK_TAGS.has(t)}">${t}</button>`).join('');
+  let list=MARKET.map((m,i)=>({m,i})).filter(({m})=>(MK_TYPE==='All'||m.type===MK_TYPE)
+    &&(MK_TAGS.size===0||(m.tags||[]).some(t=>MK_TAGS.has(t)))
+    &&(!MK_Q||((m.t+' '+m.p+' '+(m.tags||[]).join(' ')).toLowerCase().includes(MK_Q))));
+  $('#market').innerHTML=list.map(({m,i})=>`<div class="tile">
+    <div style="display:flex;justify-content:space-between;align-items:start;gap:8px"><h3>${esc(m.t)}</h3><span class="tag">${esc(m.type)}</span></div>
+    <div class="price" style="margin:6px 0">${esc(m.p)}</div>
+    <div class="chips" style="margin:0 0 8px">${(m.tags||[]).map(t=>`<span class="ttag">${esc(t)}</span>`).join('')}</div>
+    <div class="small">@${esc(m.by)} · <span style="color:${coColor(m.co)}">${esc(m.co)}</span></div>
+    ${reactsHTML(m,'market',i)}
+    <button class="btn sm act-msg" style="margin-top:8px;width:100%" data-h="${esc(m.by)}" data-co="${esc(m.co)}" ${m.by===ME.handle?'disabled':''}>${m.by===ME.handle?'Your listing':'✉ Message'}</button></div>`).join('')
+    ||'<div class="small">Nothing matches that filter yet.</div>';
+  $('#wListings').textContent=MARKET.length+' active';
+}
+function renderNewTags(){ $('#mkNewTags').innerHTML=TAGS.map(t=>`<button class="chip" data-newtag="${t}" aria-pressed="${NEW_TAGS.has(t)}">${t}</button>`).join(''); }
+$('#typeRow').addEventListener('click',e=>{ const b=e.target.closest('.cat'); if(!b)return; MK_TYPE=b.dataset.t; renderMarket(); });
+$('#tagRow').addEventListener('click',e=>{ const b=e.target.closest('.chip'); if(!b)return; const t=b.dataset.tag; MK_TAGS.has(t)?MK_TAGS.delete(t):MK_TAGS.add(t); renderMarket(); });
+$('#mkNewTags').addEventListener('click',e=>{ const b=e.target.closest('.chip'); if(!b)return; const t=b.dataset.newtag; NEW_TAGS.has(t)?NEW_TAGS.delete(t):NEW_TAGS.add(t); renderNewTags(); });
+$('#mkSearch').addEventListener('input',e=>{ MK_Q=e.target.value.toLowerCase().trim(); renderMarket(); });
+$('#mkPost').onclick=()=>{ const t=$('#mkTitle').value.trim(); if(!t){ $('#mkTitle').focus(); return; }
+  MARKET.unshift({t,p:$('#mkPrice').value.trim()||'—',type:$('#mkType').value,tags:[...NEW_TAGS],by:ME.handle,co:ME.company,reacts:{},mine:[]});
+  LS.set('canyonsoc_market',MARKET); $('#mkTitle').value=$('#mkPrice').value=''; NEW_TAGS.clear(); renderNewTags(); MK_TYPE='All'; renderMarket(); renderMe(); };
 
 /* ================= messaging ================= */
 let THREADS=LS.get('canyonsoc_threads',[
@@ -685,34 +922,25 @@ let THREADS=LS.get('canyonsoc_threads',[
  {h:"trailrunner_lou",co:"Xanterra",msgs:[{me:false,t:"still got that seat to Flagstaff Friday if you want it",at:"Tue 6:02p"}],unread:true},
 ]);
 let ACTIVE=null;
-function saveThreads(){ LS.set('canyonsoc_threads',THREADS); }
-function unreadCount(){ return THREADS.filter(t=>t.unread).length; }
-function updateDM(){ const tab=$('.tab[data-view="messages"]'); tab.classList.toggle('has-unread',unreadCount()>0); }
-function openDM(h,co){ let th=THREADS.find(t=>t.h===h); if(!th){ th={h,co:co||'',msgs:[],unread:false}; THREADS.unshift(th); saveThreads(); }
-  show('messages'); selectConv(h); }
-function renderConvs(){ $('#convlist').innerHTML=THREADS.map(t=>{ const c=coColor(t.co); const last=t.msgs[t.msgs.length-1];
-  return `<div class="conv" data-h="${esc(t.h)}" aria-selected="${ACTIVE===t.h}">${avi(ini('@'+t.h),c).replace('class="avi"','class="avi" style="width:42px;height:42px;font-size:14px"').replace('avi" style','avi2" style')}
+const saveThreads=()=>LS.set('canyonsoc_threads',THREADS);
+const unreadCount=()=>THREADS.filter(t=>t.unread).length;
+function updateDM(){ $('.tab[data-view="messages"]').classList.toggle('has-unread',unreadCount()>0); }
+function openDM(h,co){ let th=THREADS.find(t=>t.h===h); if(!th){ th={h,co:co||person(h).co||'',msgs:[],unread:false}; THREADS.unshift(th); saveThreads(); } show('messages'); selectConv(h); }
+function renderConvs(){ $('#convlist').innerHTML=THREADS.map(t=>{ const last=t.msgs[t.msgs.length-1];
+  return `<div class="conv" data-h="${esc(t.h)}" aria-selected="${ACTIVE===t.h}">${avi(t.h,t.co,42,11)}
     <div style="min-width:0"><div class="cn">@${esc(t.h)}</div><div class="cp">${last?esc(last.t):'No messages yet'}</div></div>
-    ${t.unread?'<span class="un"></span>':'<span></span>'}</div>`; }).join('')||'<div class="empty">No conversations yet.</div>';
-  // fix avatar class (template above kept .avi sizing)
-  $$('#convlist .avi2').forEach(a=>a.className='avi');
-  $$('#convlist .avi').forEach(a=>{ a.style.width='42px'; a.style.height='42px'; a.style.fontSize='14px'; });
-  updateDM();
-}
+    ${t.unread?'<span class="un"></span>':'<span></span>'}</div>`; }).join('')||'<div class="empty">No conversations yet.</div>'; updateDM(); }
 function selectConv(h){ ACTIVE=h; const th=THREADS.find(t=>t.h===h); if(!th)return; th.unread=false; saveThreads();
   $('#msgwrap').classList.add('thread-open');
   $('#threadEmpty').style.display='none'; $('#thead').style.display='flex'; $('#tbody').style.display='flex'; $('#tcompose').style.display='flex';
-  const c=coColor(th.co); const a=$('#thAvi'); a.style.background=`linear-gradient(135deg,${c},color-mix(in oklab,${c} 55%,#000))`; a.textContent=ini('@'+th.h);
+  $('#thAvi').outerHTML=avi(th.h,th.co,38,11).replace('class="avi"','class="avi" id="thAvi"');
   $('#thName').textContent='@'+th.h; $('#thSub').textContent=th.co||'CanyonSoc';
   $('#tbody').innerHTML=th.msgs.map(m=>`<div class="bubble ${m.me?'me':'them'}">${esc(m.t)}<span class="bt">${esc(m.at||'')}</span></div>`).join('')||'<div class="small" style="margin:auto">Say hi 👋</div>';
-  $('#tbody').scrollTop=$('#tbody').scrollHeight;
-  renderConvs();
-}
+  $('#tbody').scrollTop=$('#tbody').scrollHeight; renderConvs(); }
 $('#convlist').addEventListener('click',e=>{ const c=e.target.closest('.conv'); if(c) selectConv(c.dataset.h); });
 $('#thBack').onclick=()=>$('#msgwrap').classList.remove('thread-open');
 $('#tcompose').addEventListener('submit',e=>{ e.preventDefault(); const inp=$('#tinput'),t=inp.value.trim(); if(!t||!ACTIVE)return;
-  const th=THREADS.find(x=>x.h===ACTIVE); const now=new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});
-  th.msgs.push({me:true,t,at:now}); saveThreads(); inp.value=''; selectConv(ACTIVE); });
+  const th=THREADS.find(x=>x.h===ACTIVE); th.msgs.push({me:true,t,at:new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}); saveThreads(); inp.value=''; selectConv(ACTIVE); });
 document.body.addEventListener('click',e=>{ const b=e.target.closest('.act-msg'); if(b&&!b.disabled) openDM(b.dataset.h,b.dataset.co); });
 
 /* ================= tabs / palette / theme ================= */
@@ -737,13 +965,13 @@ function openPal(){ palette.classList.add('open'); palInput.value=''; renderPal(
 function closePal(){ palette.classList.remove('open'); }
 function renderPal(it){ palResults.innerHTML=it.map(c=>`<div class="result" data-cmd="${c[1]}">${c[0]}<span class="kbd">↵</span></div>`).join('')||'<div class="result">No matches</div>'; }
 $('#btnPalette').onclick=openPal; $('#fabPalette').onclick=openPal;
-addEventListener('keydown',e=>{ if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){ e.preventDefault(); openPal(); } if(e.key==='Escape') closePal(); });
+addEventListener('keydown',e=>{ if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){ e.preventDefault(); openPal(); } if(e.key==='Escape'){ closePal(); $('#lightbox').classList.remove('open'); } });
 palInput.addEventListener('input',()=>{ const q=palInput.value.toLowerCase(); renderPal(CMDS.filter(c=>c[0].toLowerCase().includes(q))); });
 palResults.addEventListener('click',e=>{ const r=e.target.closest('.result'); if(r&&r.dataset.cmd) runCmd(r.dataset.cmd); });
 palInput.addEventListener('keydown',e=>{ if(e.key==='Enter'){ const r=palResults.querySelector('.result[data-cmd]'); if(r) runCmd(r.dataset.cmd); }});
 function runCmd(c){ closePal(); if(c==='__night')setTheme('night'); else if(c==='__day')setTheme('day'); else show(c); }
 
-/* ================= live data (Open-Meteo + NWS · no keys) ================= */
+/* ================= live data ================= */
 async function loadWeather(){ try{
   const tz=Intl.DateTimeFormat().resolvedOptions().timeZone||'America/Phoenix';
   for(const p of [{id:'wxSouth',s:'sx',lat:36.0544,lon:-112.1401},{id:'wxPhantom',s:'px',lat:36.0986,lon:-112.0969}]){
@@ -761,7 +989,8 @@ async function loadAlerts(){ const el=$('#alertsList'); try{
   }catch(e){ el.textContent='Alerts unavailable.'; $('#ax').textContent='—'; } }
 
 /* ================= boot ================= */
-initProfileForm(); renderMe(); renderFeed(); renderAlerts(); renderBuses(); renderRides(); renderMarket(); renderConvs(); updateDM();
+initProfileForm(); renderMe(); renderFeed(); renderAlerts(); renderSky(); renderBuses(); renderRides();
+renderNewTags(); renderMarket(); renderPhotos(); renderParks(); renderFriends(); renderConvs(); updateDM();
 $$('.reveal').forEach(el=>requestAnimationFrame(()=>el.classList.add('in')));
 loadWeather(); loadAlerts(); setInterval(loadWeather,600000); setInterval(loadAlerts,900000);
 </script>
