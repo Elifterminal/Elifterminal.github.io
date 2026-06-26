@@ -269,6 +269,17 @@ body{margin:0; color:var(--fg); overflow-x:hidden; background:var(--bg);
 .lightbox.open{display:grid}
 .lightbox img{max-width:94vw; max-height:90vh; border-radius:14px; box-shadow:0 30px 80px rgba(0,0,0,.6)}
 
+/* images: post media, cover photo, composer preview, message images */
+.media.zoom,.msgimg{cursor:zoom-in}
+.cover{height:152px; background-size:cover; background-position:center; position:relative;
+  background:linear-gradient(120deg, color-mix(in oklab,var(--clay) 55%, var(--term)), color-mix(in oklab,var(--river) 42%, var(--term)))}
+.coverbtn{position:absolute; right:12px; bottom:12px; border:1px solid var(--border); background:color-mix(in oklab,var(--term) 72%, transparent); color:var(--fg); border-radius:10px; padding:6px 11px; font-weight:800; cursor:pointer; font-size:12.5px; -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px)}
+.imgpreview{position:relative; border:1px solid var(--border); border-radius:12px; overflow:hidden; max-width:280px}
+.imgpreview img{display:block; width:100%; max-height:190px; object-fit:cover}
+.imgpreview button{position:absolute; top:7px; right:7px; border:0; background:rgba(0,0,0,.62); color:#fff; width:27px; height:27px; border-radius:50%; cursor:pointer; font-weight:900; line-height:1}
+.bubble.hasimg{padding:5px}
+.msgimg img{display:block; max-width:230px; max-height:250px; border-radius:9px}
+
 /* palette */
 .palette{position:fixed; inset:0; display:grid; place-items:start center; padding-top:14vh; background:rgba(8,9,13,.5);
   backdrop-filter:blur(8px); z-index:80; opacity:0; pointer-events:none; transition:.15s}
@@ -428,15 +439,17 @@ footer b{color:var(--fg)}
         <header><span class="badge"><span class="spark"></span> POST</span> Share with the Canyon</header>
         <div class="body composer">
           <textarea id="composer" placeholder="What's happening around the rim? Trail beta, a sunset, a question for your neighbors…"></textarea>
+          <div id="postImgPreview" class="imgpreview" hidden></div>
           <div class="row">
             <div style="display:flex; gap:8px; flex-wrap:wrap">
-              <span class="pill" data-tag="📷 Photo">📷 Photo</span>
+              <span class="pill" id="pillPhoto">📷 Photo</span>
               <span class="pill" data-tag="📍 Check-in">📍 Check-in</span>
               <span class="pill" data-tag="🪧 For sale">🪧 For sale</span>
               <span class="pill" data-tag="📣 Announcement">📣 Announcement</span>
             </div>
             <button class="btn primary" id="postBtn">Post</button>
           </div>
+          <input type="file" id="postImgInput" accept="image/*" hidden />
         </div>
       </article>
       <article class="panel reveal">
@@ -552,7 +565,7 @@ footer b{color:var(--fg)}
           <div class="empty" id="threadEmpty">Pick a conversation, or hit <b style="margin:0 5px">Message</b> on any post, listing, ride or friend to start one.</div>
           <div class="thead" id="thead" style="display:none"><div class="avi" id="thAvi"></div><div><div class="cn" id="thName" style="font-weight:900"></div><div class="small" id="thSub"></div></div><span class="spacer"></span><button class="btn sm" id="thBack">←</button></div>
           <div class="tbody" id="tbody" style="display:none"></div>
-          <form class="tcompose" id="tcompose" style="display:none"><input id="tinput" placeholder="Write a message…" autocomplete="off" /><button class="btn primary" type="submit">Send</button></form>
+          <form class="tcompose" id="tcompose" style="display:none"><button type="button" class="btn ghost sm" id="msgImgBtn" title="Send photo">📷</button><input id="tinput" placeholder="Write a message…" autocomplete="off" /><button class="btn primary" type="submit">Send</button><input type="file" id="msgImgInput" accept="image/*" hidden /></form>
         </div>
       </div>
     </article>
@@ -562,8 +575,9 @@ footer b{color:var(--fg)}
   <div class="view" id="view-profile">
     <div style="display:grid; gap:16px; max-width:860px; margin:0 auto; width:100%">
       <!-- header -->
-      <article class="panel reveal">
-        <div class="body">
+      <article class="panel reveal" style="overflow:hidden">
+        <div class="cover" id="pfCover"><button class="coverbtn" id="pfCoverBtn">✎ Cover</button></div>
+        <div class="body" style="margin-top:-44px">
           <div class="phead">
             <div class="bigavi avi" id="pfAvi"><button class="editpic" id="pfPicBtn" title="Change photo">✎</button></div>
             <div class="pmeta">
@@ -580,6 +594,7 @@ footer b{color:var(--fg)}
             <div><b id="stParks2">0</b><span class="small">parks</span></div>
           </div>
           <input type="file" id="pfPicInput" accept="image/*" hidden />
+          <input type="file" id="pfCoverInput" accept="image/*" hidden />
         </div>
       </article>
 
@@ -833,7 +848,8 @@ function renderMe(){
   const myListings=MARKET.filter(m=>m.by===ME.handle).length, myPosts=POSTS.filter(p=>p.h===ME.handle).length;
   $('#stPosts').textContent=myPosts; $('#stFriends').textContent=friends; $('#stPhotos').textContent=photos; $('#stListings').textContent=myListings;
   // profile header
-  $('#pfAvi').style.cssText='width:100px;height:100px;border-radius:26px;'+(ME.pic?`background-image:url('${ME.pic}')`:`background:linear-gradient(135deg,${coColor(ME.company)},color-mix(in oklab,${coColor(ME.company)} 55%,#000))`);
+  $('#pfCover').style.backgroundImage=ME.cover?`url('${ME.cover}')`:'';
+  $('#pfAvi').style.cssText='width:100px;height:100px;border-radius:26px;border:3px solid var(--term);'+(ME.pic?`background-image:url('${ME.pic}')`:`background:linear-gradient(135deg,${coColor(ME.company)},color-mix(in oklab,${coColor(ME.company)} 55%,#000))`);
   $('#pfAvi').innerHTML=(ME.pic?'':meInitials())+'<button class="editpic" id="pfPicBtn" title="Change photo">✎</button>';
   $('#pfHeadName').textContent=ME.name; $('#pfHeadHandle').textContent='@'+ME.handle+' · '+(ME.status||'On the rim');
   $('#pfHeadTags').innerHTML=`<span class="tag co">${esc(ME.company)}</span><span class="tag">${esc(ME.job||'—')}</span>`+((ME.house&&ME.house!=='—'&&ME.house!=='Prefer not to say')?`<span class="tag house">${esc(ME.house)}</span>`:'');
@@ -860,8 +876,9 @@ function readImage(file,max,cb){ if(!file)return; const r=new FileReader();
     w=Math.round(w*sc); h=Math.round(h*sc); const c=document.createElement('canvas'); c.width=w; c.height=h;
     c.getContext('2d').drawImage(img,0,0,w,h); cb(c.toDataURL('image/jpeg',0.82)); }; img.src=r.result; };
   r.readAsDataURL(file); }
-document.addEventListener('click',e=>{ if(e.target.closest('#pfPicBtn')) $('#pfPicInput').click(); });
-$('#pfPicInput').addEventListener('change',e=>{ readImage(e.target.files[0],320,d=>{ ME.pic=d; LS.set('canyonsoc_profile',ME); renderMe(); renderFeed(); renderConvs(); }); e.target.value=''; });
+document.addEventListener('click',e=>{ if(e.target.closest('#pfPicBtn')) $('#pfPicInput').click(); if(e.target.closest('#pfCoverBtn')) $('#pfCoverInput').click(); });
+$('#pfPicInput').addEventListener('change',e=>{ readImage(e.target.files[0],320,d=>{ ME.pic=d; if(LS.set('canyonsoc_profile',ME)){ renderMe(); renderFeed(); renderConvs(); } }); e.target.value=''; });
+$('#pfCoverInput').addEventListener('change',e=>{ readImage(e.target.files[0],1100,d=>{ ME.cover=d; if(LS.set('canyonsoc_profile',ME)) renderMe(); }); e.target.value=''; });
 
 /* photos */
 function renderPhotos(){ const g=$('#photoGrid');
@@ -870,7 +887,7 @@ function renderPhotos(){ const g=$('#photoGrid');
     +`<div class="addphoto" id="addPhoto">＋<br>Add photo</div>`;
 }
 document.addEventListener('click',e=>{ if(e.target.closest('#addPhoto')) $('#photoInput').click();
-  const im=e.target.closest('.photo .img'); if(im){ $('#lightboxImg').src=im.dataset.src; $('#lightbox').classList.add('open'); } });
+  const im=e.target.closest('.photo .img,.zoom,.msgimg'); if(im&&im.dataset.src){ $('#lightboxImg').src=im.dataset.src; $('#lightbox').classList.add('open'); } });
 $('#photoInput').addEventListener('change',e=>{ const f=e.target.files[0]; if(!f)return;
   readImage(f,640,d=>{ const cap=prompt('Caption (optional):')||''; PHOTOS.unshift({id:nid(),src:d,cap,reacts:{},mine:[]});
     if(LS.set('canyonsoc_photos',PHOTOS)) renderPhotos(); renderMe(); }); e.target.value=''; });
@@ -907,7 +924,8 @@ document.addEventListener('click',e=>{
 let FEED_FILTER='all';
 let OPEN_COMMENTS=new Set();
 function postHTML(p){ const pe=person(p.h); if(!p.comments)p.comments=[];
-  const media=p.media?`<div class="media" style="background:linear-gradient(135deg,${coColor(pe.co)},color-mix(in oklab,${coColor(pe.co)} 35%,#000))"></div>`:'';
+  const media=p.img?`<div class="media zoom" data-src="${p.img}" style="background-image:url('${p.img}')"></div>`
+    :(p.media?`<div class="media" style="background:linear-gradient(135deg,${coColor(pe.co)},color-mix(in oklab,${coColor(pe.co)} 35%,#000))"></div>`:'');
   const cmts=p.comments.map(c=>{ const ce=person(c.h); return `<div class="cmt">${avi(c.h,ce.co,32,9)}<div><span class="ch">@${esc(c.h)}</span> <span class="meta">· ${esc(c.t)}</span><div class="ctext">${esc(c.x)}</div></div></div>`; }).join('');
   return `<div class="post">${avi(p.h,pe.co,46,12)}<div>
     <div class="handle">@${esc(p.h)}<span class="co">${esc(pe.co)} · ${esc(pe.job)}</span> <span class="meta">· ${esc(p.t)}</span></div>
@@ -938,8 +956,14 @@ function simulateEngagement(postId){
     pushNotif({who,ico:'💬',text:'commented on your post',ref:'home'}); },9000); }
 $('#feedSeg').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b)return; FEED_FILTER=b.dataset.f;
   $$('#feedSeg button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.f===FEED_FILTER)); renderFeed(); });
-$('#postBtn').onclick=()=>{ const ta=$('#composer'),t=ta.value.trim(); if(!t)return; const id=nid();
-  POSTS.unshift({id,h:ME.handle,t:'now',x:t,media:0,reacts:{},mine:[],comments:[]}); ta.value=''; renderFeed(); renderMe(); simulateEngagement(id); };
+let pendingPostImg='';
+function clearPostImg(){ pendingPostImg=''; $('#postImgPreview').hidden=true; $('#postImgPreview').innerHTML=''; }
+$('#pillPhoto').onclick=()=>$('#postImgInput').click();
+$('#postImgInput').addEventListener('change',e=>{ readImage(e.target.files[0],900,d=>{ pendingPostImg=d;
+  $('#postImgPreview').hidden=false; $('#postImgPreview').innerHTML=`<img src="${d}" alt=""><button type="button" id="postImgX" title="Remove">✕</button>`; }); e.target.value=''; });
+document.addEventListener('click',e=>{ if(e.target.closest('#postImgX')) clearPostImg(); });
+$('#postBtn').onclick=()=>{ const ta=$('#composer'),t=ta.value.trim(); if(!t&&!pendingPostImg)return; const id=nid();
+  POSTS.unshift({id,h:ME.handle,t:'now',x:t,img:pendingPostImg||'',media:0,reacts:{},mine:[],comments:[]}); ta.value=''; clearPostImg(); renderFeed(); renderMe(); simulateEngagement(id); };
 $$('.pill[data-tag]').forEach(p=>p.onclick=()=>{ const ta=$('#composer'); ta.value=(ta.value+' '+p.dataset.tag).trim()+' '; ta.focus(); });
 
 /* ================= sidebar widgets ================= */
@@ -1037,19 +1061,23 @@ function updateDM(){ $('.tab[data-view="messages"]').classList.toggle('has-unrea
 function openDM(h,co){ let th=THREADS.find(t=>t.h===h); if(!th){ th={h,co:co||person(h).co||'',msgs:[],unread:false}; THREADS.unshift(th); saveThreads(); } show('messages'); selectConv(h); }
 function renderConvs(){ $('#convlist').innerHTML=THREADS.map(t=>{ const last=t.msgs[t.msgs.length-1];
   return `<div class="conv" data-h="${esc(t.h)}" aria-selected="${ACTIVE===t.h}">${avi(t.h,t.co,42,11)}
-    <div style="min-width:0"><div class="cn">@${esc(t.h)}</div><div class="cp">${last?esc(last.t):'No messages yet'}</div></div>
+    <div style="min-width:0"><div class="cn">@${esc(t.h)}</div><div class="cp">${last?esc(last.t||'📷 Photo'):'No messages yet'}</div></div>
     ${t.unread?'<span class="un"></span>':'<span></span>'}</div>`; }).join('')||'<div class="empty">No conversations yet.</div>'; updateDM(); }
 function selectConv(h){ ACTIVE=h; const th=THREADS.find(t=>t.h===h); if(!th)return; th.unread=false; saveThreads();
   $('#msgwrap').classList.add('thread-open');
   $('#threadEmpty').style.display='none'; $('#thead').style.display='flex'; $('#tbody').style.display='flex'; $('#tcompose').style.display='flex';
   $('#thAvi').outerHTML=avi(th.h,th.co,38,11).replace('class="avi"','class="avi" id="thAvi"');
   $('#thName').textContent='@'+th.h; $('#thSub').textContent=th.co||'CanyonSoc';
-  $('#tbody').innerHTML=th.msgs.map(m=>`<div class="bubble ${m.me?'me':'them'}">${esc(m.t)}<span class="bt">${esc(m.at||'')}</span></div>`).join('')||'<div class="small" style="margin:auto">Say hi 👋</div>';
+  $('#tbody').innerHTML=th.msgs.map(m=>{ const body=m.img?`<div class="msgimg" data-src="${m.img}"><img src="${m.img}" alt="" loading="lazy"></div>`:esc(m.t);
+    return `<div class="bubble ${m.me?'me':'them'}${m.img?' hasimg':''}">${body}<span class="bt">${esc(m.at||'')}</span></div>`; }).join('')||'<div class="small" style="margin:auto">Say hi 👋</div>';
   $('#tbody').scrollTop=$('#tbody').scrollHeight; renderConvs(); }
 $('#convlist').addEventListener('click',e=>{ const c=e.target.closest('.conv'); if(c) selectConv(c.dataset.h); });
 $('#thBack').onclick=()=>$('#msgwrap').classList.remove('thread-open');
 $('#tcompose').addEventListener('submit',e=>{ e.preventDefault(); const inp=$('#tinput'),t=inp.value.trim(); if(!t||!ACTIVE)return;
   const th=THREADS.find(x=>x.h===ACTIVE); th.msgs.push({me:true,t,at:new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}); saveThreads(); inp.value=''; selectConv(ACTIVE); });
+$('#msgImgBtn').onclick=()=>{ if(ACTIVE) $('#msgImgInput').click(); };
+$('#msgImgInput').addEventListener('change',e=>{ if(!ACTIVE){ e.target.value=''; return; } readImage(e.target.files[0],800,d=>{ const th=THREADS.find(x=>x.h===ACTIVE);
+  th.msgs.push({me:true,img:d,at:new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}); if(saveThreads()) selectConv(ACTIVE); }); e.target.value=''; });
 document.body.addEventListener('click',e=>{ const b=e.target.closest('.act-msg'); if(b&&!b.disabled) openDM(b.dataset.h,b.dataset.co); });
 
 /* ================= notifications + toasts ================= */
