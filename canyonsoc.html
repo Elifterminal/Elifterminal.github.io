@@ -491,7 +491,7 @@ footer b{color:var(--fg)}
       </div>
       <div class="widget">
         <div class="wtitle">Getting around</div>
-        <div class="kv"><span>Park buses (NPS)</span><strong style="color:var(--ok)">5 routes</strong></div>
+        <div class="kv"><span>Park buses (NPS)</span><strong id="kvBuses" style="color:var(--ok)">5 routes</strong></div>
         <div class="kv"><span>Ride share posts</span><strong id="wRides">—</strong></div>
         <button class="btn sm" style="margin-top:10px; width:100%" data-goto="transit">Open transit &amp; rides →</button>
       </div>
@@ -510,7 +510,7 @@ footer b{color:var(--fg)}
       <div class="body">
         <p class="small" style="margin-top:0">The free National Park Service shuttle buses, color-coded by route. Public park system — no fare, no reservation.</p>
         <div id="parkBuses"></div>
-        <p class="small" style="margin:10px 0 0; opacity:.8">Summer 2026 schedule (May 23–Sep 11) — hours shift by season, so confirm at <a href="https://www.nps.gov/grca/planyourvisit/shuttle-buses.htm" target="_blank" rel="noopener" style="color:var(--clay-bright)">nps.gov</a>. Any active closures show in the Alerts panel above.</p>
+        <p class="small" style="margin:10px 0 0; opacity:.8"><span id="busSeasonNote"></span><a href="https://www.nps.gov/grca/planyourvisit/shuttle-buses.htm" target="_blank" rel="noopener" style="color:var(--clay-bright)">nps.gov</a>. Any active closures show in the Alerts panel above.</p>
       </div>
     </article>
     <article class="panel reveal">
@@ -817,16 +817,42 @@ let PARK_ALERTS=[];
 /* NPS data (park alerts + ranger night-sky events) comes through the Supabase Edge
    Function "nps", which holds the free developer.nps.gov key as a server-side secret.
    The key is never shipped in this public repo — see supabase/functions/nps/index.ts. */
-/* NPS South Rim shuttle routes. Published schedule (nps.gov/grca), NOT a live feed —
-   no NPS shuttle API exists. Verified against the Summer 2026 schedule (May 23–Sep 11)
-   on 2026-06-26. Hours shift seasonally; live closures surface in the Alerts panel. */
-const PARK_BUSES=[
- {n:"Village (Blue)",color:"#2f6fb0",rt:"Visitor Center ↔ lodges, campgrounds, Market Plaza",hrs:"6:30a–9:30p",st:"Running"},
- {n:"Kaibab / Rim (Orange)",color:"#e08a1e",rt:"Mather Point ↔ Yaki Point / S. Kaibab Trailhead",hrs:"5:00a–sunset+1hr",st:"Running"},
- {n:"Hermits Rest (Red)",color:"#c0392b",rt:"Village ↔ Hermits Rest · 7 mi · 9 overlooks",hrs:"8:00a–sunset+1hr",st:"Running"},
- {n:"Hikers' Express",color:"#3a7d44",rt:"Bright Angel Lodge → S. Kaibab Trailhead (via Backcountry Info + VC)",hrs:"4 / 5 / 6 am",st:"Running"},
- {n:"Tusayan (Purple)",color:"#7d4ea3",rt:"Visitor Center ↔ Tusayan gateway · 6.8 mi",hrs:"8:00a–9:00p · summer",st:"Running"},
-];
+/* NPS South Rim shuttle routes — published schedule (nps.gov/grca), NOT a live feed
+   (no NPS shuttle API exists). Hours verified against Summer 2026 (May 23–Sep 11) on
+   2026-06-26. Date-based seasonal switch below: NPS only posts winter HOURS close to
+   the season, so off-season we flip the verifiable parts — which routes run — and keep
+   sunset-relative hours (accurate year-round) rather than invent winter clock times.
+   Verified facts: Hermit Rd is closed to private cars Mar 1–Nov 30 (Red runs only then;
+   in winter you drive it yourself); Tusayan/Purple is summer-only. */
+function buildParkBuses(d){
+  const md=(d.getMonth()+1)*100+d.getDate();   // Jun 26 -> 626
+  const summer=md>=523&&md<=911;               // NPS summer window
+  const redSeason=md>=301&&md<=1130;           // Hermit Rd closed to cars
+  const dusk='sunset+1hr';
+  const b=[
+    {n:"Village (Blue)",color:"#2f6fb0",rt:"Visitor Center ↔ lodges, campgrounds, Market Plaza",
+      hrs:summer?"6:30a–9:30p":"seasonal hrs · see nps.gov",st:"Running"},
+    {n:"Kaibab / Rim (Orange)",color:"#e08a1e",rt:"Mather Point ↔ Yaki Point / S. Kaibab Trailhead",
+      hrs:(summer?"5:00a":"~1hr pre-sunrise")+"–"+dusk,st:"Running"},
+  ];
+  b.push(redSeason
+    ? {n:"Hermits Rest (Red)",color:"#c0392b",rt:"Village ↔ Hermits Rest · 7 mi · 9 overlooks",hrs:"8:00a–"+dusk,st:"Running"}
+    : {n:"Hermits Rest (Red)",color:"#c0392b",rt:"Winter: Hermit Rd open to private cars — drive it yourself",hrs:"Dec–Feb",st:"Off-season"});
+  b.push({n:"Hikers' Express",color:"#3a7d44",rt:"Bright Angel Lodge → S. Kaibab Trailhead (via Backcountry Info + VC)",
+    hrs:summer?"4 / 5 / 6 am":"seasonal · see nps.gov",st:"Running"});
+  b.push(summer
+    ? {n:"Tusayan (Purple)",color:"#7d4ea3",rt:"Visitor Center ↔ Tusayan gateway · 6.8 mi",hrs:"8:00a–9:00p",st:"Running"}
+    : {n:"Tusayan (Purple)",color:"#7d4ea3",rt:"Summer-only route — resumes ~late May",hrs:"Summer",st:"Off-season"});
+  return b;
+}
+function busSeasonNote(d){
+  const md=(d.getMonth()+1)*100+d.getDate();
+  const summer=md>=523&&md<=911, redSeason=md>=301&&md<=1130;
+  if(summer) return 'Showing the summer schedule (May 23–Sep 11). Hours still shift near the season edges — confirm at ';
+  if(!redSeason) return 'Showing the winter schedule: Hermits Rest (Red) &amp; Tusayan (Purple) pause and hours run shorter. NPS posts exact winter times closer to the date — confirm at ';
+  return 'Showing the spring/fall schedule: Tusayan (Purple) is summer-only and hours differ from the summer table — confirm at ';
+}
+let PARK_BUSES=buildParkBuses(new Date());
 const EMP_SHUTTLE=[
  {w:"DNC — Route A",what:"Staff housing ↔ Yavapai / Market Plaza",by:"schedule pending"},
  {w:"Xanterra — Route 1",what:"Dorms ↔ historic lodges (El Tovar, Bright Angel)",by:"schedule pending"},
@@ -1048,6 +1074,9 @@ async function loadNpsEvents(){ const el=$('#skEvents'); if(!window.SUPABASE_URL
   }catch(e){ el.innerHTML=''; } }
 function renderBuses(){ $('#parkBuses').innerHTML=PARK_BUSES.map(b=>`<div class="routebar"><span class="dotc" style="background:${b.color};color:${b.color}"></span>
     <span class="rn">${b.n}</span><span class="rt small">${b.rt}</span><span class="tag">${b.hrs}</span><strong style="color:${b.st==='Running'?'var(--ok)':'var(--warn)'}">${b.st}</strong></div>`).join('');
+  const running=PARK_BUSES.filter(b=>b.st==='Running').length;
+  if($('#busSeasonNote')) $('#busSeasonNote').innerHTML=busSeasonNote(new Date());
+  if($('#kvBuses')) $('#kvBuses').textContent=running===PARK_BUSES.length?running+' routes':running+' of '+PARK_BUSES.length+' running';
   $('#empShuttle').innerHTML=EMP_SHUTTLE.map(s=>`<div class="routebar"><span class="dotc" style="background:var(--clay);color:var(--clay)"></span>
     <span class="rn">${s.w}</span><span class="rt small">${s.what}</span><span class="tag">${s.by}</span></div>`).join('');
   const row=a=>a.map(t=>`<div class="t"><span>depart <b>${t[0]}</b></span><span>arrive <b>${t[1]}</b></span></div>`).join('');
