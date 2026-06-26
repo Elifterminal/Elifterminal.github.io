@@ -388,6 +388,7 @@ footer b{color:var(--fg)}
     <button class="tab" data-view="marketplace">Marketplace</button>
     <button class="tab" data-view="messages">Messages<span class="dm-dot"></span></button>
     <button class="tab" data-view="profile">Profile</button>
+    <button class="tab" data-view="admin" id="tabAdmin" hidden>🛡 Admin</button>
   </div>
   <button id="btnAuth" class="btn sm primary" title="Sign in">Sign in</button>
   <button id="btnSearch" class="btn sm" title="Search (/)" aria-label="Search">🔎</button>
@@ -694,6 +695,28 @@ footer b{color:var(--fg)}
         <button class="btn ghost sm" id="notifClearAll" style="margin-left:auto">Mark all read</button></header>
       <div class="body"><div class="tabrow" id="notifFilters"></div></div>
       <div id="notifFull"></div>
+    </article>
+  </div>
+
+  <!-- ============ ADMIN CONSOLE (staff only) ============ -->
+  <style>
+    #view-admin .arow{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.08)}
+    #view-admin .lrow{display:flex;align-items:center;gap:12px;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.08);font-size:13px}
+    #view-admin .rolesel,#view-admin select,#view-admin input{padding:6px 9px;border-radius:9px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);color:var(--fg)}
+    #view-admin h4{margin:14px 0 6px;font-size:13px;letter-spacing:.04em;text-transform:uppercase;opacity:.75}
+  </style>
+  <div class="view" id="view-admin">
+    <article class="panel reveal">
+      <header><span class="badge"><span class="spark"></span> 🛡 ADMIN</span> Console <span class="demo-pill" id="adminRolePill">owner</span></header>
+      <div class="body">
+        <div class="tabrow" id="adminTabs">
+          <button class="cat" data-at="users" aria-pressed="true">Users</button>
+          <button class="cat" data-at="moderation" aria-pressed="false">Moderation</button>
+          <button class="cat" data-at="logs" aria-pressed="false">Logs</button>
+          <button class="cat" data-at="invites" aria-pressed="false">Invites</button>
+        </div>
+        <div id="adminBody" style="margin-top:14px"></div>
+      </div>
     </article>
   </div>
 </main>
@@ -1198,6 +1221,7 @@ function show(v){ $$('.view').forEach(x=>x.classList.toggle('active',x.id==='vie
   $$('.tab').forEach(t=>t.setAttribute('aria-current',t.dataset.view===v?'page':'false'));
   $$('.reveal').forEach(el=>{ if(el.offsetParent!==null) requestAnimationFrame(()=>el.classList.add('in')); });
   if(v==='messages'&&!ACTIVE) $('#msgwrap').classList.remove('thread-open');
+  if(v==='admin') adminRenderTab();
   window.scrollTo({top:0,behavior:'smooth'}); }
 $('#tabs').addEventListener('click',e=>{ const t=e.target.closest('.tab'); if(t) show(t.dataset.view); });
 document.addEventListener('click',e=>{ const g=e.target.closest('[data-goto]'); if(g) show(g.dataset.goto); });
@@ -1295,14 +1319,16 @@ let sb=null, AUTH_USER=null;
 async function initSupabase(){ if(!window.SUPABASE_URL||!window.SUPABASE_KEY) return;
   try{ const m=await import('https://esm.sh/@supabase/supabase-js@2');
     sb=m.createClient(window.SUPABASE_URL,window.SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
-    sb.auth.onAuthStateChange((_e,session)=>handleAuth(session));
-    const { data }=await sb.auth.getSession(); handleAuth(data.session);
+    sb.auth.onAuthStateChange((_e,session)=>handleAuth(session,_e));
+    const { data }=await sb.auth.getSession(); handleAuth(data.session,'INITIAL');
   }catch(err){ console.warn('Supabase init failed — staying in local mode:',err); }
 }
 function updateAuthUI(){ const b=$('#btnAuth'); if(!b)return;
   if(AUTH_USER){ b.textContent='@'+(ME.handle||'you'); b.classList.remove('primary'); b.title='Signed in — click to sign out'; }
   else { b.textContent='Sign in'; b.classList.add('primary'); b.title='Sign in'; } }
-function handleAuth(session){ AUTH_USER=session?session.user:null; updateAuthUI(); if(AUTH_USER) loadProfileFromCloud(); loadDirectory(); }
+function handleAuth(session,evt){ AUTH_USER=session?session.user:null; updateAuthUI();
+  if(AUTH_USER){ loadProfileFromCloud(); adminGate(evt==='SIGNED_IN'); } else { const t=$('#tabAdmin'); if(t)t.hidden=true; }
+  loadDirectory(); }
 /* Real people directory: every profile in Supabase becomes a searchable/mentionable
    user. Read-only, public per RLS. Excludes me (ME is merged in by peopleAll). */
 async function loadDirectory(){ if(!sb) return;
@@ -1333,6 +1359,112 @@ $('#authSend').onclick=async()=>{ const email=$('#authEmail').value.trim(), msg=
   msg.textContent='Sending…';
   const { error }=await sb.auth.signInWithOtp({ email, options:{ emailRedirectTo: location.href.split('#')[0] } });
   msg.textContent = error ? ('⚠️ '+error.message) : '✓ Magic link sent — check your email (and spam folder).'; };
+
+/* ================= Admin console (owner / admin / moderator) ================= */
+/* Every button calls the `admin` edge function, which re-checks the caller's role
+   server-side and logs the action. The UI gate below is convenience only. */
+let ADMIN_ROLE='member', ADMIN_TAB='users';
+async function adminCall(action, extra){
+  try{ const { data:{ session } }=await sb.auth.getSession(); if(!session) return {error:'not signed in'};
+    const r=await fetch(`${window.SUPABASE_URL}/functions/v1/admin`,{ method:'POST',
+      headers:{ 'Content-Type':'application/json', apikey:window.SUPABASE_KEY, Authorization:`Bearer ${session.access_token}` },
+      body: JSON.stringify(Object.assign({action}, extra||{})) });
+    return await r.json();
+  }catch(e){ return {error:String(e)}; }
+}
+async function adminGate(logSignin){ const tab=$('#tabAdmin'); if(!tab) return;
+  if(!sb||!AUTH_USER){ tab.hidden=true; return; }
+  const res=await adminCall('ping', logSignin?{event:'signin'}:{});
+  ADMIN_ROLE=(res&&res.role)||'member';
+  const staff=['owner','admin','moderator'].includes(ADMIN_ROLE);
+  tab.hidden=!staff; if(staff){ const p=$('#adminRolePill'); if(p)p.textContent=ADMIN_ROLE; }
+}
+function adminStaff(){ return ['owner','admin','moderator'].includes(ADMIN_ROLE); }
+function adminRenderTab(){ const body=$('#adminBody'); if(!body) return;
+  if(!adminStaff()){ body.innerHTML='<div class="small">Not authorized.</div>'; return; }
+  $$('#adminTabs .cat').forEach(b=>b.setAttribute('aria-pressed', b.dataset.at===ADMIN_TAB));
+  body.innerHTML='<div class="small">Loading…</div>';
+  ({users:adminUsers, logs:adminLogs, invites:adminInvites, moderation:adminModeration}[ADMIN_TAB]||adminUsers)();
+}
+{ const at=$('#adminTabs'); if(at) at.addEventListener('click',e=>{ const b=e.target.closest('.cat'); if(!b)return; ADMIN_TAB=b.dataset.at; adminRenderTab(); }); }
+const aerr=r=>(r&&r.error)?': '+esc(r.error):'';
+
+async function adminUsers(){ const r=await adminCall('list_users');
+  if(!r||!r.users){ $('#adminBody').innerHTML='<div class="small">Could not load users'+aerr(r)+'</div>'; return; }
+  const now=Date.now();
+  const rows=r.users.slice().sort((a,b)=>(b.last_seen||'').localeCompare(a.last_seen||'')).map(u=>{
+    const online=u.last_seen&&(now-new Date(u.last_seen).getTime()<120000);
+    const banned=u.ban?`<span class="tag" style="background:#5a1f1f;color:#ffb4b4">banned · ${esc(u.ban.type)}</span>`:'';
+    if(u.role==='owner') return `<div class="arow">${avi(u.handle||'?',u.company,34,9)}
+      <div style="min-width:0;flex:1"><div style="font-weight:800">${esc(u.name||u.handle||'—')} <span class="small">@${esc(u.handle||'')}</span></div>
+      <div class="small">${esc(u.company||'')} · role <b>owner</b></div></div><span class="tag">owner</span></div>`;
+    const opts=['member','moderator','admin'].map(rr=>`<option ${u.role===rr?'selected':''}>${rr}</option>`).join('');
+    return `<div class="arow" data-uid="${esc(u.user_id)}" data-handle="${esc(u.handle||'')}" data-banned="${u.ban?esc(u.ban.type):''}">
+      ${avi(u.handle||'?',u.company,34,9)}
+      <div style="min-width:0;flex:1"><div style="font-weight:800">${esc(u.name||u.handle||'—')} <span class="small">@${esc(u.handle||'')}</span> ${online?'<span title="active <2m" style="color:var(--ok)">●</span>':''}</div>
+      <div class="small">${esc(u.company||'')}${u.job?' · '+esc(u.job):''} · role <b>${esc(u.role)}</b> ${banned}</div></div>
+      <select class="rolesel" title="Set role">${opts}</select>
+      <button class="btn ghost sm a-ban">${u.ban?'Unban':'Ban'}</button>
+      <button class="btn ghost sm a-del" title="Delete account">✕</button></div>`;
+  }).join('');
+  $('#adminBody').innerHTML=`<div class="small" style="margin-bottom:10px">${r.users.length} member(s) · ● = active in last 2 min</div>${rows}`;
+}
+document.addEventListener('change',async e=>{ const s=e.target.closest('#view-admin .rolesel'); if(!s)return;
+  const row=s.closest('.arow'); const r=await adminCall('set_role',{target:row.dataset.uid,target_handle:row.dataset.handle,role:s.value});
+  toast(r&&r.ok?'✓ Role updated':'⚠️'+(aerr(r)||' failed')); adminUsers(); });
+document.addEventListener('click',async e=>{
+  const ban=e.target.closest('#view-admin .a-ban'); const del=e.target.closest('#view-admin .a-del');
+  if(ban){ const row=ban.closest('.arow');
+    if(row.dataset.banned){ const r=await adminCall('unban',{target:row.dataset.uid,target_handle:row.dataset.handle}); toast(r&&r.ok?'✓ Unbanned':'⚠️'+(aerr(r)||' failed')); adminUsers(); return; }
+    const type=confirm('OK = FULL ban (cannot sign in).\nCancel = SOFT ban (read-only).')?'full':'soft';
+    const reason=prompt('Reason (logged):')||'';
+    const r=await adminCall('ban',{target:row.dataset.uid,target_handle:row.dataset.handle,type,reason}); toast(r&&r.ok?'✓ Banned ('+type+')':'⚠️'+(aerr(r)||' failed')); adminUsers(); return; }
+  if(del){ const row=del.closest('.arow'); if(!confirm('Permanently delete @'+row.dataset.handle+'? Removes their account and content.'))return;
+    const r=await adminCall('delete_user',{target:row.dataset.uid,target_handle:row.dataset.handle}); toast(r&&r.ok?'✓ Deleted':'⚠️'+(aerr(r)||' failed')); adminUsers(); }
+});
+
+async function adminLogs(){ const r=await adminCall('logs',{limit:250});
+  if(!r||!r.logs){ $('#adminBody').innerHTML='<div class="small">Could not load logs'+aerr(r)+'</div>'; return; }
+  const rows=r.logs.map(l=>`<div class="lrow">
+    <span class="small" style="white-space:nowrap;opacity:.7">${esc(new Date(l.ts).toLocaleString())}</span>
+    <span style="flex:1"><b>@${esc(l.actor_handle||'system')}</b> <span class="tag">${esc(l.action)}</span> ${l.target_type?esc(l.target_type)+(l.target_handle?' @'+esc(l.target_handle):(l.target_id?' #'+esc(l.target_id):'')):''}</span>
+    <span class="small" style="white-space:nowrap;opacity:.6">${esc(l.ip||'')}</span></div>`).join('')||'<div class="small">No log entries yet.</div>';
+  $('#adminBody').innerHTML=`<div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+    <input id="logFilter" placeholder="filter (e.g. ban, signin, set_role, insert_posts)" style="flex:1;min-width:170px" />
+    <button class="btn sm" id="logRefresh">Refresh</button></div><div id="logRows">${rows}</div>`;
+  $('#logRefresh').onclick=adminLogs;
+  $('#logFilter').oninput=ev=>{ const q=ev.target.value.toLowerCase(); $$('#logRows .lrow').forEach(x=>{ x.style.display=x.textContent.toLowerCase().includes(q)?'':'none'; }); };
+}
+
+async function adminInvites(){
+  $('#adminBody').innerHTML=`<div style="max-width:460px;padding:14px;border:1px solid rgba(255,255,255,.12);border-radius:12px">
+    <div class="small" style="margin-bottom:12px">Invite by email at a privilege level. They get a sign-in link; the role applies when they sign up.</div>
+    <div class="field" style="margin:0 0 10px"><label>Email</label><input id="invEmail" type="email" placeholder="name@example.com" style="width:100%" /></div>
+    <div class="field" style="margin:0 0 12px"><label>Role</label><select id="invRole" style="width:100%"><option value="member">Member</option><option value="moderator">Moderator</option>${ADMIN_ROLE==='owner'?'<option value="admin">Admin</option>':''}</select></div>
+    <button class="btn primary sm" id="invSend">Send invite</button><div class="small" id="invMsg" style="margin-top:10px"></div></div>`;
+  $('#invSend').onclick=async()=>{ const email=$('#invEmail').value.trim(); if(!email){ $('#invMsg').textContent='Enter an email.'; return; }
+    $('#invMsg').textContent='Sending…'; const r=await adminCall('invite',{email,role:$('#invRole').value});
+    $('#invMsg').textContent=r&&r.ok?('✓ Invite sent to '+email):('⚠️'+(aerr(r)||' failed')); };
+}
+
+async function adminModeration(){
+  const [posts,listings,thr]=await Promise.all([
+    sb.from('posts').select('id,body,created_at').order('created_at',{ascending:false}).limit(25),
+    sb.from('listings').select('id,title,type,created_at').order('created_at',{ascending:false}).limit(25),
+    adminCall('list_threads') ]);
+  const P=(posts.data||[]).map(p=>`<div class="lrow"><span style="flex:1">📝 <b>#${esc(p.id)}</b> ${esc((p.body||'').slice(0,90))}</span><button class="btn ghost sm a-moddel" data-tt="posts" data-id="${esc(p.id)}">remove</button></div>`).join('')||'<div class="small">No posts.</div>';
+  const L=(listings.data||[]).map(p=>`<div class="lrow"><span style="flex:1">🪧 <b>#${esc(p.id)}</b> ${esc(p.title||'')} <span class="small">${esc(p.type||'')}</span></span><button class="btn ghost sm a-moddel" data-tt="listings" data-id="${esc(p.id)}">remove</button></div>`).join('')||'<div class="small">No listings.</div>';
+  const T=((thr&&thr.threads)||[]).map(t=>`<div class="lrow"><span style="flex:1">💬 thread <b>#${esc(t.id)}</b></span><button class="btn ghost sm a-dmview" data-id="${esc(t.id)}">view (logged)</button></div>`).join('')||'<div class="small">No DM threads.</div>';
+  $('#adminBody').innerHTML=`<div class="small" style="margin-bottom:8px">Remove only content that crosses the legal line — illegal activity, illegal trade, real abuse material. Speech itself stays free.</div>
+    <h4>Posts</h4>${P}<h4>Marketplace</h4>${L}<h4>Direct messages — full visibility, every open is logged</h4>${T}<div id="dmView"></div>`;
+}
+document.addEventListener('click',async e=>{
+  const md=e.target.closest('#view-admin .a-moddel'); if(md){ if(!confirm('Remove this content?'))return;
+    const r=await adminCall('delete_content',{ttype:md.dataset.tt,id:md.dataset.id}); toast(r&&r.ok?'✓ Removed':'⚠️'+(aerr(r)||' failed')); adminModeration(); return; }
+  const dv=e.target.closest('#view-admin .a-dmview'); if(dv){ const r=await adminCall('read_thread',{thread_id:dv.dataset.id});
+    const msgs=(r&&r.messages)||[]; $('#dmView').innerHTML=`<div style="margin-top:12px;padding:12px;border:1px solid rgba(255,255,255,.12);border-radius:12px"><div class="small" style="margin-bottom:8px">Thread #${esc(dv.dataset.id)} — ${msgs.length} message(s) · access logged</div>`+
+      (msgs.map(m=>`<div class="lrow"><span class="small" style="opacity:.7">${esc(new Date(m.created_at).toLocaleString())}</span><span style="flex:1">${esc((m.body||'📷 photo').slice(0,140))}</span><button class="btn ghost sm a-moddel" data-tt="messages" data-id="${esc(m.id)}">remove</button></div>`).join('')||'<div class="small">Empty thread.</div>')+`</div>`; }
+});
 
 /* ================= boot ================= */
 initProfileForm(); renderMe(); renderFeed(); renderAlerts(); renderBuses(); renderRides();
