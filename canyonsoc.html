@@ -3,6 +3,15 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<!-- Security hardening (GitHub Pages can't set response headers, so these ship in-page).
+     CSP locks where data can be sent (connect-src) + blocks plugins/base-tag injection,
+     limiting blast radius if any XSS slipped past output encoding. Inline script/style
+     need 'unsafe-inline' because the whole app is one inline file; output encoding (esc/
+     safePic) is the primary XSS defense, CSP is defense-in-depth. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://esm.sh; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://ajkbsexxwbqjylbepvmh.supabase.co wss://ajkbsexxwbqjylbepvmh.supabase.co https://esm.sh https://api.open-meteo.com https://api.weather.gov https://api.sunrise-sunset.org; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'" />
+<meta name="referrer" content="strict-origin-when-cross-origin" />
+<!-- Clickjacking guard: meta CSP can't carry frame-ancestors, so bust out of any frame. -->
+<script>try{if(window.top!==window.self)window.top.location=window.self.location}catch(e){}</script>
 <title>CanyonSoc — Grand Canyon Community</title>
 <meta name="description" content="CanyonSoc — an independent community network for the people who live and work around the Grand Canyon. Profiles, friends, feed, ride share, marketplace, messages. Live weather, NWS alerts, NPS feed, Sky Party, park buses." />
 <style>
@@ -780,7 +789,11 @@ footer b{color:var(--fg)}
 
 /* ================= helpers / storage ================= */
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
-const esc=s=>(''+s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const esc=s=>(''+s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+/* Only allow inline base64 images or https URLs for any user-supplied image src.
+   Returns '' (no image) for anything else — blocks attribute/CSS breakout and
+   javascript:/data:text smuggling via a crafted pic_url/photo/cover URL. */
+const safePic=u=>{ u=''+(u||''); return (/^data:image\/(png|jpe?g|gif|webp|avif);base64,[A-Za-z0-9+/=\s]+$/i.test(u)||/^https:\/\/[^\s"'<>\\]+$/i.test(u))?u:''; };
 const LS={ get(k,d){ try{ const v=localStorage.getItem(k); return v?JSON.parse(v):d; }catch(e){ return d; } },
   set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); return true; }catch(e){ alert('Storage is full — remove a photo or two and try again.'); return false; } } };
 const COMPANIES=["Delaware North","Xanterra","National Park Service","Grand Canyon Conservancy","Aramark","Forever Resorts","Hualapai Tribe","Grand Canyon Airlines","Papillon","Self-employed / Other"];
@@ -794,9 +807,9 @@ const REACTS=['👍','❤️','😂','😮','🔥','🌵'];
 let PEOPLE={};
 function person(h){ if(h===ME.handle) return {name:ME.name,co:ME.company,job:ME.job,bio:ME.bio,pic:ME.pic}; return PEOPLE[h]||{name:'@'+h,co:'',job:''}; }
 function picFor(h){ if(h===ME.handle) return ME.pic; return (PEOPLE[h]&&PEOPLE[h].pic)||''; }
-function avi(h,co,size,radius){ const c=coColor(co||person(h).co); const p=picFor(h);
+function avi(h,co,size,radius){ const c=coColor(co||person(h).co); const p=safePic(picFor(h));
   const st=`width:${size}px;height:${size}px;border-radius:${radius||12}px;`;
-  if(p) return `<div class="avi" style="${st}background-image:url('${p}')"></div>`;
+  if(p) return `<div class="avi" style="${st}background-image:url('${esc(p)}')"></div>`;
   return `<div class="avi" style="${st}background:linear-gradient(135deg,${c},color-mix(in oklab,${c} 55%,#000))">${ini('@'+h)}</div>`; }
 
 /* ================= state ================= */
@@ -898,8 +911,8 @@ function renderMe(){
   const myListings=MARKET.filter(m=>m.by===ME.handle).length, myPosts=POSTS.filter(p=>p.h===ME.handle).length;
   $('#stPosts').textContent=myPosts; $('#stFriends').textContent=friends; $('#stPhotos').textContent=photos; $('#stListings').textContent=myListings;
   // profile header
-  $('#pfCover').style.backgroundImage=ME.cover?`url('${ME.cover}')`:'';
-  $('#pfAvi').style.cssText='width:100px;height:100px;border-radius:26px;border:3px solid var(--term);'+(ME.pic?`background-image:url('${ME.pic}')`:`background:linear-gradient(135deg,${coColor(ME.company)},color-mix(in oklab,${coColor(ME.company)} 55%,#000))`);
+  $('#pfCover').style.backgroundImage=safePic(ME.cover)?`url("${safePic(ME.cover)}")`:'';
+  $('#pfAvi').style.cssText='width:100px;height:100px;border-radius:26px;border:3px solid var(--term);'+(safePic(ME.pic)?`background-image:url("${safePic(ME.pic)}")`:`background:linear-gradient(135deg,${coColor(ME.company)},color-mix(in oklab,${coColor(ME.company)} 55%,#000))`);
   $('#pfAvi').innerHTML=(ME.pic?'':meInitials())+'<button class="editpic" id="pfPicBtn" title="Change photo">✎</button>';
   $('#pfHeadName').textContent=ME.name; $('#pfHeadHandle').textContent='@'+ME.handle+' · '+(ME.status||'On the rim');
   $('#pfHeadTags').innerHTML=`<span class="tag co">${esc(ME.company)}</span><span class="tag">${esc(ME.job||'—')}</span>`+((ME.house&&ME.house!=='—'&&ME.house!=='Prefer not to say')?`<span class="tag house">${esc(ME.house)}</span>`:'');
@@ -934,12 +947,12 @@ $('#pfCoverInput').addEventListener('change',e=>{ readImage(e.target.files[0],11
 
 /* photos */
 function renderPhotos(){ const g=$('#photoGrid');
-  g.innerHTML=PHOTOS.map(ph=>`<div class="photo"><div class="img" data-src="${ph.src}" style="background-image:url('${ph.src}')"></div>
+  g.innerHTML=PHOTOS.map(ph=>`<div class="photo"><div class="img" data-src="${esc(safePic(ph.src))}" style="background-image:url('${esc(safePic(ph.src))}')"></div>
     ${ph.cap?`<div class="pcap">${esc(ph.cap)}</div>`:''}${reactsHTML(ph,'photo',ph.id)}</div>`).join('')
     +`<div class="addphoto" id="addPhoto">＋<br>Add photo</div>`;
 }
 document.addEventListener('click',e=>{ if(e.target.closest('#addPhoto')) $('#photoInput').click();
-  const im=e.target.closest('.photo .img,.zoom,.msgimg'); if(im&&im.dataset.src){ $('#lightboxImg').src=im.dataset.src; $('#lightbox').classList.add('open'); } });
+  const im=e.target.closest('.photo .img,.zoom,.msgimg'); if(im){ const ls=safePic(im.dataset.src); if(ls){ $('#lightboxImg').src=ls; $('#lightbox').classList.add('open'); } } });
 $('#photoInput').addEventListener('change',e=>{ const f=e.target.files[0]; if(!f)return;
   readImage(f,640,d=>{ const cap=prompt('Caption (optional):')||''; PHOTOS.unshift({id:nid(),src:d,cap,reacts:{},mine:[]});
     if(LS.set('canyonsoc_photos',PHOTOS)) renderPhotos(); renderMe(); }); e.target.value=''; });
@@ -976,7 +989,7 @@ document.addEventListener('click',e=>{
 let FEED_FILTER='all';
 let OPEN_COMMENTS=new Set();
 function postHTML(p){ const pe=person(p.h); if(!p.comments)p.comments=[];
-  const media=p.img?`<div class="media zoom" data-src="${p.img}" style="background-image:url('${p.img}')"></div>`
+  const pim=safePic(p.img); const media=pim?`<div class="media zoom" data-src="${esc(pim)}" style="background-image:url('${esc(pim)}')"></div>`
     :(p.media?`<div class="media" style="background:linear-gradient(135deg,${coColor(pe.co)},color-mix(in oklab,${coColor(pe.co)} 35%,#000))"></div>`:'');
   const cmts=p.comments.map(c=>{ const ce=person(c.h); return `<div class="cmt">${avi(c.h,ce.co,32,9)}<div><span class="ch">@${esc(c.h)}</span> <span class="meta">· ${esc(c.t)}</span><div class="ctext">${linkify(c.x)}</div></div></div>`; }).join('');
   return `<div class="post">${avi(p.h,pe.co,46,12)}<div>
@@ -1005,7 +1018,7 @@ let pendingPostImg='';
 function clearPostImg(){ pendingPostImg=''; $('#postImgPreview').hidden=true; $('#postImgPreview').innerHTML=''; }
 $('#pillPhoto').onclick=()=>$('#postImgInput').click();
 $('#postImgInput').addEventListener('change',e=>{ readImage(e.target.files[0],900,d=>{ pendingPostImg=d;
-  $('#postImgPreview').hidden=false; $('#postImgPreview').innerHTML=`<img src="${d}" alt=""><button type="button" id="postImgX" title="Remove">✕</button>`; }); e.target.value=''; });
+  $('#postImgPreview').hidden=false; $('#postImgPreview').innerHTML=`<img src="${esc(safePic(d))}" alt=""><button type="button" id="postImgX" title="Remove">✕</button>`; }); e.target.value=''; });
 document.addEventListener('click',e=>{ if(e.target.closest('#postImgX')) clearPostImg(); });
 $('#postBtn').onclick=()=>{ const ta=$('#composer'),t=ta.value.trim(); if(!t&&!pendingPostImg)return; const id=nid();
   POSTS.unshift({id,h:ME.handle,t:'now',x:t,img:pendingPostImg||'',media:0,reacts:{},mine:[],comments:[]}); ta.value=''; clearPostImg(); renderFeed(); renderMe(); };
@@ -1132,7 +1145,7 @@ function selectConv(h){ ACTIVE=h; const th=THREADS.find(t=>t.h===h); if(!th)retu
   $('#threadEmpty').style.display='none'; $('#thead').style.display='flex'; $('#tbody').style.display='flex'; $('#tcompose').style.display='flex';
   $('#thAvi').outerHTML=avi(th.h,th.co,38,11).replace('class="avi"','class="avi" id="thAvi"');
   $('#thName').textContent='@'+th.h; $('#thSub').textContent=th.co||'CanyonSoc';
-  $('#tbody').innerHTML=th.msgs.map(m=>{ const body=m.img?`<div class="msgimg" data-src="${m.img}"><img src="${m.img}" alt="" loading="lazy"></div>`:esc(m.t);
+  $('#tbody').innerHTML=th.msgs.map(m=>{ const mim=safePic(m.img); const body=mim?`<div class="msgimg" data-src="${esc(mim)}"><img src="${esc(mim)}" alt="" loading="lazy"></div>`:esc(m.t);
     return `<div class="bubble ${m.me?'me':'them'}${m.img?' hasimg':''}">${body}<span class="bt">${esc(m.at||'')}</span></div>`; }).join('')||'<div class="small" style="margin:auto">Say hi 👋</div>';
   $('#tbody').scrollTop=$('#tbody').scrollHeight; renderConvs(); }
 $('#convlist').addEventListener('click',e=>{ const c=e.target.closest('.conv'); if(c) selectConv(c.dataset.h); });
@@ -1149,12 +1162,12 @@ let NOTIFS=LS.get('canyonsoc_notifs',[]);
 const saveNotifs=()=>LS.set('canyonsoc_notifs',NOTIFS);
 const notifUnread=()=>NOTIFS.filter(n=>!n.read).length;
 function updateBell(){ const b=$('#nbadge'),n=notifUnread(); b.textContent=n>9?'9+':n; b.classList.toggle('show',n>0); }
-function renderNotifs(){ $('#notifList').innerHTML=NOTIFS.map(n=>`<div class="nrow ${n.read?'':'unread'}" data-id="${n.id}" data-ref="${n.ref||'home'}">
-   <div class="nico">${avi(n.who||'?',person(n.who||'').co,40,11)}<span class="nbubble">${n.ico||'🔔'}</span></div>
+function renderNotifs(){ $('#notifList').innerHTML=NOTIFS.map(n=>`<div class="nrow ${n.read?'':'unread'}" data-id="${esc(n.id)}" data-ref="${esc(n.ref||'home')}">
+   <div class="nico">${avi(n.who||'?',person(n.who||'').co,40,11)}<span class="nbubble">${esc(n.ico||'🔔')}</span></div>
    <div class="ntext"><b>@${esc(n.who||'CanyonSoc')}</b> ${esc(n.text)}</div><div class="ntime">${esc(n.t)}</div></div>`).join('')
    ||'<div class="nrow"><div></div><div class="small">No notifications yet.</div><div></div></div>'; }
 function pushNotif(o,silent){ NOTIFS.unshift({id:'n'+Date.now()+Math.round(Math.random()*1e4),read:false,t:'now',kind:'react',...o}); saveNotifs(); renderNotifs(); renderNotifFull(); updateBell();
-  if(!silent) toast(`${o.ico||'🔔'} <b>@${esc(o.who||'')}</b> ${esc(o.text)}`); }
+  if(!silent) toast(`${esc(o.ico||'🔔')} <b>@${esc(o.who||'')}</b> ${esc(o.text)}`); }
 function toast(html){ const t=document.createElement('div'); t.className='toast'; t.innerHTML=html; $('#toasts').appendChild(t);
   setTimeout(()=>{ t.style.transition='opacity .3s'; t.style.opacity='0'; setTimeout(()=>t.remove(),300); },3800); }
 $('#btnBell').onclick=e=>{ e.stopPropagation(); const p=$('#notifPanel'); if(p.classList.toggle('open')) renderNotifs(); };
@@ -1171,8 +1184,8 @@ function renderNotifFull(){ if(!$('#notifFilters'))return;
   $('#notifFilters').innerHTML=NKINDS.map(([k,label])=>{ const c=k==='all'?NOTIFS.length:NOTIFS.filter(n=>(n.kind||'react')===k).length;
     return `<button class="cat" data-k="${k}" aria-pressed="${NOTIF_FILTER===k}">${label}${c?` <span class="small">${c}</span>`:''}</button>`; }).join('');
   const list=NOTIF_FILTER==='all'?NOTIFS:NOTIFS.filter(n=>(n.kind||'react')===NOTIF_FILTER);
-  $('#notifFull').innerHTML=list.map(n=>`<div class="nrow ${n.read?'':'unread'}" data-id="${n.id}" data-ref="${n.ref||'home'}">
-    <div class="nico">${avi(n.who||'?',person(n.who||'').co,40,11)}<span class="nbubble">${n.ico||'🔔'}</span></div>
+  $('#notifFull').innerHTML=list.map(n=>`<div class="nrow ${n.read?'':'unread'}" data-id="${esc(n.id)}" data-ref="${esc(n.ref||'home')}">
+    <div class="nico">${avi(n.who||'?',person(n.who||'').co,40,11)}<span class="nbubble">${esc(n.ico||'🔔')}</span></div>
     <div class="ntext"><b>@${esc(n.who||'CanyonSoc')}</b> ${esc(n.text)}</div><div class="ntime">${esc(n.t)}</div></div>`).join('')||'<div class="nrow"><div></div><div class="small">Nothing here yet.</div><div></div></div>'; }
 $('#notifFilters').addEventListener('click',e=>{ const b=e.target.closest('.cat'); if(!b)return; NOTIF_FILTER=b.dataset.k; renderNotifFull(); });
 $('#notifFull').addEventListener('click',e=>{ const r=e.target.closest('.nrow'); if(!r||!r.dataset.id)return; const n=NOTIFS.find(x=>x.id===r.dataset.id);
@@ -1233,7 +1246,7 @@ document.addEventListener('click',e=>{ const mn=e.target.closest('.mention'); if
 const mbox=document.createElement('div'); mbox.className='mentionbox'; document.body.appendChild(mbox);
 let mTarget=null,mStart=0,mItems=[],mIndex=0;
 function mClose(){ mbox.style.display='none'; mTarget=null; }
-function mRender(){ const all=peopleAll(); mbox.innerHTML=mItems.map((h,i)=>`<div class="mitem ${i===mIndex?'on':''}" data-h="${h}">${avi(h,all[h].co,26,8)}<span><b>@${esc(h)}</b> <span class="small">${esc(all[h].name)}</span></span></div>`).join(''); mbox.style.display='block'; }
+function mRender(){ const all=peopleAll(); mbox.innerHTML=mItems.map((h,i)=>`<div class="mitem ${i===mIndex?'on':''}" data-h="${esc(h)}">${avi(h,all[h].co,26,8)}<span><b>@${esc(h)}</b> <span class="small">${esc(all[h].name)}</span></span></div>`).join(''); mbox.style.display='block'; }
 function mScan(el){ const pos=el.selectionStart, left=el.value.slice(0,pos), m=left.match(/@(\w*)$/); if(!m){ mClose(); return; }
   mStart=pos-m[0].length; const q=m[1].toLowerCase(), all=peopleAll();
   mItems=Object.keys(all).filter(h=>h!==ME.handle&&(h.toLowerCase().includes(q)||(all[h].name||'').toLowerCase().includes(q))).slice(0,6);
@@ -1263,7 +1276,7 @@ function runSearch(q){ if(!q){ searchResults.innerHTML='<div class="sgroup">Type
   const mkt=MARKET.filter(m=>((m.t||'')+' '+(m.p||'')+' '+(m.tags||[]).join(' ')+' '+(m.type||'')).toLowerCase().includes(q)).slice(0,5);
   const rides=RIDES.filter(r=>((r.to||'')+' '+(r.seats||'')+' '+(r.when||'')).toLowerCase().includes(q)).slice(0,5);
   let html='';
-  if(ppl.length) html+='<div class="sgroup">People</div>'+ppl.map(h=>`<div class="sresult" data-act="person" data-h="${h}">${avi(h,all[h].co,34,10)}<div><b>@${esc(h)}</b> <span class="small">${esc(all[h].name||'')} · ${esc(all[h].co||'')}</span></div></div>`).join('');
+  if(ppl.length) html+='<div class="sgroup">People</div>'+ppl.map(h=>`<div class="sresult" data-act="person" data-h="${esc(h)}">${avi(h,all[h].co,34,10)}<div><b>@${esc(h)}</b> <span class="small">${esc(all[h].name||'')} · ${esc(all[h].co||'')}</span></div></div>`).join('');
   if(posts.length) html+='<div class="sgroup">Posts</div>'+posts.map(p=>`<div class="sresult" data-act="post"><span class="si">📝</span><div><b>@${esc(p.h)}</b> <span class="small">${esc((p.x||'').slice(0,72))}</span></div></div>`).join('');
   if(mkt.length) html+='<div class="sgroup">Marketplace</div>'+mkt.map(m=>`<div class="sresult" data-act="market" data-q="${esc(m.t)}"><span class="si">🪧</span><div><b>${esc(m.t)}</b> <span class="small">${esc(m.p)} · ${esc(m.type)}</span></div></div>`).join('');
   if(rides.length) html+='<div class="sgroup">Rides</div>'+rides.map(r=>`<div class="sresult" data-act="transit"><span class="si">🚗</span><div><b>${esc(r.to)}</b> <span class="small">${esc(r.when)} · @${esc(r.by)}</span></div></div>`).join('');
@@ -1295,7 +1308,8 @@ function handleAuth(session){ AUTH_USER=session?session.user:null; updateAuthUI(
 async function loadDirectory(){ if(!sb) return;
   const { data,error }=await sb.from('profiles').select('handle,name,company,job,bio,pic_url');
   if(error){ console.warn('directory load:',error); return; }
-  const next={}; (data||[]).forEach(p=>{ if(p.handle&&p.handle!==ME.handle) next[p.handle]={name:p.name||('@'+p.handle),co:p.company||'',job:p.job||'',bio:p.bio||'',pic:p.pic_url||''}; });
+  const next=Object.create(null); const RESV=['__proto__','constructor','prototype'];
+  (data||[]).forEach(p=>{ if(p.handle&&p.handle!==ME.handle&&!RESV.includes(p.handle)) next[p.handle]={name:p.name||('@'+p.handle),co:p.company||'',job:p.job||'',bio:p.bio||'',pic:safePic(p.pic_url)}; });
   PEOPLE=next; renderFriends(); renderConvs(); }
 async function loadProfileFromCloud(){ if(!sb||!AUTH_USER)return;
   const { data,error }=await sb.from('profiles').select('*').eq('user_id',AUTH_USER.id).maybeSingle();
@@ -1309,7 +1323,7 @@ async function saveProfileToCloud(){ if(!sb||!AUTH_USER) return false;
   const row={ user_id:AUTH_USER.id, handle:ME.handle, name:ME.name, company:ME.company, job:ME.job, housing:ME.house,
     status:ME.status, bio:ME.bio, pic_url:ME.pic||null, cover_url:ME.cover||null, updated_at:new Date().toISOString() };
   const { error }=await sb.from('profiles').upsert(row,{onConflict:'user_id'});
-  if(error){ if(error.code==='23505') toast('⚠️ That handle is already taken'); else toast('⚠️ Cloud save failed: '+(error.message||error.code)); return false; }
+  if(error){ if(error.code==='23505') toast('⚠️ That handle is already taken'); else toast('⚠️ Cloud save failed: '+esc(error.message||error.code||'unknown')); return false; }
   return true; }
 $('#btnAuth').onclick=()=>{ if(AUTH_USER){ if(confirm('Sign out of CanyonSoc?')&&sb) sb.auth.signOut().then(()=>toast('Signed out')); }
   else { $('#authModal').classList.add('open'); $('#authEmail').focus(); } };
