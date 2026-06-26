@@ -318,6 +318,7 @@ body{margin:0; color:var(--fg); overflow-x:hidden; background:var(--bg);
 .nrow .nbubble{position:absolute; bottom:-4px; right:-4px; font-size:14px; filter:drop-shadow(0 1px 2px rgba(0,0,0,.5))}
 .nrow .ntext{font-size:13.5px; line-height:1.4} .nrow .ntext b{font-weight:800}
 .nrow .ntime{font-size:11px; color:var(--muted); white-space:nowrap}
+.nall{padding:10px 14px; border-top:1px solid var(--border); position:sticky; bottom:0; background:color-mix(in oklab,var(--term) 96%, transparent)}
 @media(max-width:720px){ .notifwrap{top:58px; right:8px; left:8px; width:auto} }
 
 /* comments */
@@ -391,6 +392,7 @@ footer b{color:var(--fg)}
   <div class="panel">
     <header><span class="badge"><span class="spark"></span> 🔔 ALERTS</span> Notifications <button class="btn ghost sm" id="notifClear" style="margin-left:auto">Mark all read</button></header>
     <div id="notifList"></div>
+    <div class="nall"><button class="btn sm" id="notifSeeAll" style="width:100%">See all activity →</button></div>
   </div>
 </div>
 <div class="toasts" id="toasts" aria-live="polite"></div>
@@ -671,6 +673,16 @@ footer b{color:var(--fg)}
       </article>
     </div>
   </div>
+
+  <!-- ============ NOTIFICATIONS (full) ============ -->
+  <div class="view" id="view-notifications">
+    <article class="panel reveal">
+      <header><span class="badge"><span class="spark"></span> 🔔 ACTIVITY</span> All notifications
+        <button class="btn ghost sm" id="notifClearAll" style="margin-left:auto">Mark all read</button></header>
+      <div class="body"><div class="tabrow" id="notifFilters"></div></div>
+      <div id="notifFull"></div>
+    </article>
+  </div>
 </main>
 
 <footer>
@@ -933,7 +945,8 @@ function renderFriends(){
     <button class="btn primary sm addfriend" data-h="${esc(h)}">+ Add</button></div>`; }).join('')||'<div class="small">That is everyone around for now. 🙂</div>';
 }
 document.addEventListener('click',e=>{
-  const a=e.target.closest('.addfriend'); if(a){ if(!FRIENDS.includes(a.dataset.h))FRIENDS.push(a.dataset.h); LS.set('canyonsoc_friends',FRIENDS); renderFriends(); renderMe(); }
+  const a=e.target.closest('.addfriend'); if(a){ if(!FRIENDS.includes(a.dataset.h))FRIENDS.push(a.dataset.h); LS.set('canyonsoc_friends',FRIENDS); renderFriends(); renderMe();
+    const who=a.dataset.h; setTimeout(()=>pushNotif({who,ico:'🤝',text:'accepted your friend request',ref:'profile',kind:'friend'}),3000); }
   const u=e.target.closest('.unfriend'); if(u){ FRIENDS=FRIENDS.filter(x=>x!==u.dataset.h); LS.set('canyonsoc_friends',FRIENDS); renderFriends(); renderMe(); if(FEED_FILTER==='friends')renderFeed(); }
 });
 
@@ -963,14 +976,15 @@ $('#feed').addEventListener('click',e=>{ const c=e.target.closest('.cbtn'); if(!
 $('#feed').addEventListener('submit',e=>{ const f=e.target.closest('.caddrow'); if(!f)return; e.preventDefault();
   const id=f.dataset.id, inp=f.querySelector('.cadd'), x=inp.value.trim(); if(!x)return;
   const p=POSTS.find(pp=>pp.id===id); if(!p)return; p.comments.push({h:ME.handle,x,t:'now'}); OPEN_COMMENTS.add(id);
-  renderFeed(); renderMe(); toast('💬 Comment posted'); });
+  renderFeed(); renderMe(); toast('💬 Comment posted');
+  if(p.h!==ME.handle){ const who=p.h; setTimeout(()=>pushNotif({who,ico:'❤️',text:'liked your comment',ref:'home',kind:'react'}),4000); } });
 function simulateEngagement(postId){
   setTimeout(()=>{ const p=POSTS.find(x=>x.id===postId); if(!p)return; const who=FRIENDS[0]||'mara_k';
     if(!p.reacts)p.reacts={}; p.reacts['❤️']=(p.reacts['❤️']||0)+1; renderFeed();
-    pushNotif({who,ico:'❤️',text:'liked your post',ref:'home'}); },5000);
+    pushNotif({who,ico:'❤️',text:'liked your post',ref:'home',kind:'react'}); },5000);
   setTimeout(()=>{ const p=POSTS.find(x=>x.id===postId); if(!p)return; const who=FRIENDS[1]||FRIENDS[0]||'sky_t';
     p.comments.push({h:who,x:'love this 🙌 @'+ME.handle,t:'now'}); renderFeed();
-    pushNotif({who,ico:'💬',text:'mentioned you in a comment',ref:'home'}); },9000); }
+    pushNotif({who,ico:'💬',text:'mentioned you in a comment',ref:'home',kind:'mention'}); },9000); }
 $('#feedSeg').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b)return; FEED_FILTER=b.dataset.f;
   $$('#feedSeg button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.f===FEED_FILTER)); renderFeed(); });
 let pendingPostImg='';
@@ -1037,7 +1051,8 @@ function renderRides(){ $('#rides').innerHTML=RIDES.map(r=>`<div class="ride"><d
   $('#wRides').textContent=RIDES.length+' active'; }
 $('#ridePost').onclick=()=>{ const to=$('#rideTo').value.trim(),when=$('#rideWhen').value.trim(),seats=$('#rideSeats').value.trim();
   if(!to||!when){ $('#rideTo').focus(); return; } RIDES.unshift({to,when,seats:seats||'open',by:ME.handle,co:ME.company,mine:true});
-  LS.set('canyonsoc_rides',RIDES); $('#rideTo').value=$('#rideWhen').value=$('#rideSeats').value=''; renderRides(); };
+  LS.set('canyonsoc_rides',RIDES); $('#rideTo').value=$('#rideWhen').value=$('#rideSeats').value=''; renderRides();
+  setTimeout(()=>pushNotif({who:randFriend(),ico:'🚗',text:`wants a seat to ${to}`,ref:'transit',kind:'market'}),6000); };
 
 /* ================= marketplace ================= */
 let MK_TYPE='All', MK_TAGS=new Set(), MK_Q='', NEW_TAGS=new Set();
@@ -1064,7 +1079,8 @@ $('#mkNewTags').addEventListener('click',e=>{ const b=e.target.closest('.chip');
 $('#mkSearch').addEventListener('input',e=>{ MK_Q=e.target.value.toLowerCase().trim(); renderMarket(); });
 $('#mkPost').onclick=()=>{ const t=$('#mkTitle').value.trim(); if(!t){ $('#mkTitle').focus(); return; }
   MARKET.unshift({t,p:$('#mkPrice').value.trim()||'—',type:$('#mkType').value,tags:[...NEW_TAGS],by:ME.handle,co:ME.company,reacts:{},mine:[]});
-  LS.set('canyonsoc_market',MARKET); $('#mkTitle').value=$('#mkPrice').value=''; NEW_TAGS.clear(); renderNewTags(); MK_TYPE='All'; renderMarket(); renderMe(); };
+  LS.set('canyonsoc_market',MARKET); $('#mkTitle').value=$('#mkPrice').value=''; NEW_TAGS.clear(); renderNewTags(); MK_TYPE='All'; renderMarket(); renderMe();
+  setTimeout(()=>pushNotif({who:randFriend(),ico:'🪧',text:`is interested in "${t}"`,ref:'marketplace',kind:'market'}),6000); };
 
 /* ================= messaging ================= */
 let THREADS=LS.get('canyonsoc_threads',[
@@ -1099,10 +1115,12 @@ document.body.addEventListener('click',e=>{ const b=e.target.closest('.act-msg')
 
 /* ================= notifications + toasts ================= */
 let NOTIFS=LS.get('canyonsoc_notifs',[
- {id:'n1',who:'mara_k',ico:'❤️',text:'liked your post',ref:'home',read:false,t:'5m'},
- {id:'n2',who:'trailrunner_lou',ico:'💬',text:'commented: "see you out there!"',ref:'home',read:false,t:'18m'},
- {id:'n3',who:'sky_t',ico:'👋',text:'added you as a friend',ref:'profile',read:false,t:'1h'},
- {id:'n4',who:'jen_a',ico:'✉️',text:'sent you a message',ref:'messages',read:true,t:'2h'},
+ {id:'n1',who:'mara_k',ico:'❤️',text:'liked your post',ref:'home',read:false,t:'5m',kind:'react'},
+ {id:'n2',who:'trailrunner_lou',ico:'💬',text:'commented: "see you out there!"',ref:'home',read:false,t:'18m',kind:'comment'},
+ {id:'n5',who:'newhire_devon',ico:'🔖',text:'mentioned you in a post',ref:'home',read:false,t:'52m',kind:'mention'},
+ {id:'n3',who:'sky_t',ico:'🤝',text:'added you as a friend',ref:'profile',read:false,t:'1h',kind:'friend'},
+ {id:'n6',who:'jen_a',ico:'🪧',text:'is interested in your listing',ref:'marketplace',read:true,t:'1h',kind:'market'},
+ {id:'n4',who:'mara_k',ico:'✉️',text:'sent you a message',ref:'messages',read:true,t:'2h',kind:'message'},
 ]);
 const saveNotifs=()=>LS.set('canyonsoc_notifs',NOTIFS);
 const notifUnread=()=>NOTIFS.filter(n=>!n.read).length;
@@ -1111,8 +1129,8 @@ function renderNotifs(){ $('#notifList').innerHTML=NOTIFS.map(n=>`<div class="nr
    <div class="nico">${avi(n.who||'?',person(n.who||'').co,40,11)}<span class="nbubble">${n.ico||'🔔'}</span></div>
    <div class="ntext"><b>@${esc(n.who||'CanyonSoc')}</b> ${esc(n.text)}</div><div class="ntime">${esc(n.t)}</div></div>`).join('')
    ||'<div class="nrow"><div></div><div class="small">No notifications yet.</div><div></div></div>'; }
-function pushNotif(o){ NOTIFS.unshift({id:'n'+Date.now()+Math.round(Math.random()*1e4),read:false,t:'now',...o}); saveNotifs(); renderNotifs(); updateBell();
-  toast(`${o.ico||'🔔'} <b>@${esc(o.who||'')}</b> ${esc(o.text)}`); }
+function pushNotif(o,silent){ NOTIFS.unshift({id:'n'+Date.now()+Math.round(Math.random()*1e4),read:false,t:'now',kind:'react',...o}); saveNotifs(); renderNotifs(); renderNotifFull(); updateBell();
+  if(!silent) toast(`${o.ico||'🔔'} <b>@${esc(o.who||'')}</b> ${esc(o.text)}`); }
 function toast(html){ const t=document.createElement('div'); t.className='toast'; t.innerHTML=html; $('#toasts').appendChild(t);
   setTimeout(()=>{ t.style.transition='opacity .3s'; t.style.opacity='0'; setTimeout(()=>t.remove(),300); },3800); }
 $('#btnBell').onclick=e=>{ e.stopPropagation(); const p=$('#notifPanel'); if(p.classList.toggle('open')) renderNotifs(); };
@@ -1121,6 +1139,30 @@ $('#notifList').addEventListener('click',e=>{ const r=e.target.closest('.nrow');
   const n=NOTIFS.find(x=>x.id===r.dataset.id); if(n){ n.read=true; saveNotifs(); updateBell(); }
   $('#notifPanel').classList.remove('open'); if(r.dataset.ref) show(r.dataset.ref); });
 document.addEventListener('click',e=>{ if(!e.target.closest('#notifPanel')&&!e.target.closest('#btnBell')) $('#notifPanel').classList.remove('open'); });
+
+/* full notifications view + per-type filters + ambient activity */
+let NOTIF_FILTER='all';
+const NKINDS=[['all','All'],['react','Reactions'],['comment','Comments'],['mention','Mentions'],['friend','Friends'],['message','Messages'],['market','Market']];
+function randFriend(){ const pool=FRIENDS.length?FRIENDS:Object.keys(PEOPLE); return pool[Math.floor(Math.random()*pool.length)]; }
+function renderNotifFull(){ if(!$('#notifFilters'))return;
+  $('#notifFilters').innerHTML=NKINDS.map(([k,label])=>{ const c=k==='all'?NOTIFS.length:NOTIFS.filter(n=>(n.kind||'react')===k).length;
+    return `<button class="cat" data-k="${k}" aria-pressed="${NOTIF_FILTER===k}">${label}${c?` <span class="small">${c}</span>`:''}</button>`; }).join('');
+  const list=NOTIF_FILTER==='all'?NOTIFS:NOTIFS.filter(n=>(n.kind||'react')===NOTIF_FILTER);
+  $('#notifFull').innerHTML=list.map(n=>`<div class="nrow ${n.read?'':'unread'}" data-id="${n.id}" data-ref="${n.ref||'home'}">
+    <div class="nico">${avi(n.who||'?',person(n.who||'').co,40,11)}<span class="nbubble">${n.ico||'🔔'}</span></div>
+    <div class="ntext"><b>@${esc(n.who||'CanyonSoc')}</b> ${esc(n.text)}</div><div class="ntime">${esc(n.t)}</div></div>`).join('')||'<div class="nrow"><div></div><div class="small">Nothing here yet.</div><div></div></div>'; }
+$('#notifFilters').addEventListener('click',e=>{ const b=e.target.closest('.cat'); if(!b)return; NOTIF_FILTER=b.dataset.k; renderNotifFull(); });
+$('#notifFull').addEventListener('click',e=>{ const r=e.target.closest('.nrow'); if(!r||!r.dataset.id)return; const n=NOTIFS.find(x=>x.id===r.dataset.id);
+  if(n){ n.read=true; saveNotifs(); updateBell(); renderNotifs(); renderNotifFull(); } if(r.dataset.ref&&r.dataset.ref!=='notifications') show(r.dataset.ref); });
+$('#notifClearAll').onclick=()=>{ NOTIFS.forEach(n=>n.read=true); saveNotifs(); renderNotifs(); renderNotifFull(); updateBell(); };
+$('#notifSeeAll').onclick=()=>{ $('#notifPanel').classList.remove('open'); renderNotifFull(); show('notifications'); };
+let ambientCount=0;
+function ambientTick(){ if(document.hidden||ambientCount>=6) return; ambientCount++;
+  const acts=[{ico:'❤️',text:'liked your post',ref:'home',kind:'react'},{ico:'🔥',text:'reacted to your photo',ref:'profile',kind:'react'},
+    {ico:'💬',text:'replied in a thread you follow',ref:'home',kind:'comment'},{ico:'🪧',text:'posted a new listing',ref:'marketplace',kind:'market'},
+    {ico:'🚗',text:'posted a ride to Flagstaff',ref:'transit',kind:'market'}];
+  pushNotif({who:randFriend(),...acts[Math.floor(Math.random()*acts.length)]}, true); }
+setInterval(ambientTick, 50000);
 
 /* ================= tabs / palette / theme ================= */
 function show(v){ $$('.view').forEach(x=>x.classList.toggle('active',x.id==='view-'+v));
@@ -1219,7 +1261,7 @@ searchResults.addEventListener('click',e=>{ const r=e.target.closest('.sresult')
 /* ================= boot ================= */
 initProfileForm(); renderMe(); renderFeed(); renderAlerts(); renderBuses(); renderRides();
 renderNewTags(); renderMarket(); renderPhotos(); renderParks(); renderFriends(); renderConvs(); updateDM();
-renderNotifs(); updateBell();
+renderNotifs(); renderNotifFull(); updateBell();
 $$('.reveal').forEach(el=>requestAnimationFrame(()=>el.classList.add('in')));
 loadWeather(); loadAlerts(); loadSky();
 setInterval(loadWeather,600000); setInterval(loadAlerts,900000); setInterval(loadSky,3600000);
