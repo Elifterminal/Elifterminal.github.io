@@ -787,15 +787,8 @@ const coColor=c=>COLORS[Math.abs([...(''+c)].reduce((a,ch)=>a+ch.charCodeAt(0),0
 const ini=h=>(''+h).replace(/[@_]/g,' ').trim().split(' ').slice(0,2).map(w=>w[0]?.toUpperCase()||'').join('');
 const REACTS=['👍','❤️','😂','😮','🔥','🌵'];
 
-/* people directory (demo) */
-const PEOPLE={
- mara_k:{name:'Mara K.',co:'Delaware North',job:'Front desk',bio:'Lodging crew at Yavapai. Trail runner, bad at chess.'},
- trailrunner_lou:{name:'Lou P.',co:'Xanterra',job:'Server',bio:'R2R in a day or bust. Will drive to Flagstaff for tacos.'},
- sky_t:{name:'Sky T.',co:'National Park Service',job:'Interp Ranger',bio:'Condor nerd. Ask me about the night sky.'},
- jen_a:{name:'Jen A.',co:'Grand Canyon Conservancy',job:'Retail',bio:'Bookstore + gear. Lost & found wrangler.'},
- newhire_devon:{name:'Devon R.',co:'Aramark',job:'Line cook',bio:'New to the rim, learning the trails.'},
- sam_d:{name:'Sam D.',co:'Delaware North',job:'RV Park',bio:'Trailer Village. Two dogs, one truck.'},
-};
+/* people directory — real users, loaded from Supabase profiles (loadDirectory). Empty until people join. */
+let PEOPLE={};
 function person(h){ if(h===ME.handle) return {name:ME.name,co:ME.company,job:ME.job,bio:ME.bio,pic:ME.pic}; return PEOPLE[h]||{name:'@'+h,co:'',job:''}; }
 function picFor(h){ if(h===ME.handle) return ME.pic; return (PEOPLE[h]&&PEOPLE[h].pic)||''; }
 function avi(h,co,size,radius){ const c=coColor(co||person(h).co); const p=picFor(h);
@@ -805,44 +798,22 @@ function avi(h,co,size,radius){ const c=coColor(co||person(h).co); const p=picFo
 
 /* ================= state ================= */
 let ME=LS.get('canyonsoc_profile',{name:"You",handle:"you",job:"New here",company:"Self-employed / Other",house:"—",status:"New here",bio:"",pic:""});
-let FRIENDS=LS.get('canyonsoc_friends',['mara_k','sky_t']);
+let FRIENDS=LS.get('canyonsoc_friends',[]);
 let PHOTOS=LS.get('canyonsoc_photos',[]);
 let PARKS=LS.get('canyonsoc_parks',[]);
-let RIDES=LS.get('canyonsoc_rides',[
- {to:"Flagstaff",when:"Fri 5pm",seats:"2 seats · gas split",by:"trailrunner_lou",co:"Xanterra"},
- {to:"Las Vegas",when:"Sat 7am",seats:"3 seats · airport run",by:"jen_a",co:"Grand Canyon Conservancy"},
- {to:"Williams",when:"Sun noon",seats:"1 seat · Safeway run",by:"newhire_devon",co:"Aramark"},
-]);
+let RIDES=LS.get('canyonsoc_rides',[]);
 let _pid=1; const nid=()=>'p'+(_pid++);
-let POSTS=[
- {id:nid(),h:"mara_k",t:"6m",x:"Killer light on the rim trail right now — if you're off shift, go. 🌄",media:1,reacts:{'❤️':12,'🔥':6},mine:[],comments:[{h:"sky_t",x:"That light was unreal tonight 🔥",t:"4m"}]},
- {id:nid(),h:"trailrunner_lou",t:"22m",x:"Backcountry Office opens 8am for walk-up permits. Got South Kaibab this weekend — anyone want to split the rim-to-rim shuttle?",media:0,reacts:{'👍':5},mine:[],comments:[]},
- {id:nid(),h:"sky_t",t:"1h",x:"Condor 4-7 perched over Lookout Studio all morning. Bring binos. 🦅",media:0,reacts:{'😮':9,'❤️':14},mine:[],comments:[{h:"jen_a",x:"Saw it too — incredible.",t:"40m"},{h:"newhire_devon",x:"Adding binos to the marketplace search lol",t:"31m"}]},
- {id:nid(),h:"jen_a",t:"2h",x:"Found a set of keys with a blue carabiner near Market Plaza. DM me to claim.",media:0,reacts:{'👍':3},mine:[],comments:[]},
- {id:nid(),h:"newhire_devon",t:"3h",x:"First week living up here done. The night sky alone is worth it. Any rec for a cheap used bike?",media:0,reacts:{'🌵':7,'❤️':4},mine:[],comments:[]},
-];
+let POSTS=[];
 const TYPES=['All','For sale','ISO','Events','Announcements','Free','Yard sale'];
 const TAGS=['Cars','Computers','Clothes','Furniture','Outdoor gear','Bikes','Housing','Tickets','Tools','Appliances','Free stuff','Misc'];
-let MARKET=LS.get('canyonsoc_market',[
- {t:"Mini fridge, works great",p:"$40",type:"For sale",tags:["Appliances"],by:"newhire_devon",co:"Aramark",reacts:{},mine:[]},
- {t:"2009 Subaru Outback, 150k mi",p:"$4,800",type:"For sale",tags:["Cars"],by:"trailrunner_lou",co:"Xanterra",reacts:{},mine:[]},
- {t:"Gaming laptop — RTX 3060",p:"$650",type:"For sale",tags:["Computers"],by:"mara_k",co:"Delaware North",reacts:{},mine:[]},
- {t:"Yard sale — Trailer Village #14",p:"Sat 8am–noon",type:"Yard sale",tags:["Misc","Furniture"],by:"sam_d",co:"Delaware North",reacts:{},mine:[]},
- {t:"ISO winter boots, women's 9",p:"Will buy/trade",type:"ISO",tags:["Clothes"],by:"trailrunner_lou",co:"Xanterra",reacts:{},mine:[]},
- {t:"Free firewood — come grab it",p:"Free",type:"Free",tags:["Free stuff","Outdoor gear"],by:"sky_t",co:"National Park Service",reacts:{},mine:[]},
- {t:"Open mic at the rec center",p:"Thu 7pm · all welcome",type:"Events",tags:["Tickets"],by:"jen_a",co:"Grand Canyon Conservancy",reacts:{},mine:[]},
- {t:"Trailhead cleanup Saturday",p:"Sat 7am · meet at VC",type:"Announcements",tags:["Misc"],by:"sky_t",co:"National Park Service",reacts:{},mine:[]},
- {t:"Trek bike, M frame",p:"$220",type:"For sale",tags:["Bikes"],by:"newhire_devon",co:"Aramark",reacts:{},mine:[]},
-]);
-const PARK_ALERTS=[
- {lvl:"crit",ico:"💧",t:"Stage 2 Water Restrictions in effect",d:"Shorter showers, full loads only — Transcanyon Waterline conservation. (NPS · current)"},
- {lvl:"warn",ico:"🥵",t:"Extreme heat below the rim",d:"Avoid inner-canyon hiking 10am–4pm; carry water + salty snacks."},
- {lvl:"warn",ico:"⛔",t:"North Kaibab Trail closure begins Oct 15",d:"Hard closure to ~Feb 2027 for waterline rehab — route via Bright Angel."},
- {lvl:"info",ico:"🔥",t:"South Rim fire restrictions lifted",d:"Campfires in established rings only — status can change fast in summer."},
-];
-/* Optional: set a free NPS API key (developer.nps.gov) to pull real ranger night-sky
-   programs. Left blank on purpose — never commit a key into this public repo. */
-window.NPS_API_KEY = window.NPS_API_KEY || "";
+let MARKET=LS.get('canyonsoc_market',[]);
+/* Park alerts — pulled live from the NPS data API (Grand Canyon, parkCode=grca)
+   through a Supabase Edge Function proxy so the NPS key never ships in this public
+   repo. Starts empty; loadParkAlerts() fills it. */
+let PARK_ALERTS=[];
+/* NPS data (park alerts + ranger night-sky events) comes through the Supabase Edge
+   Function "nps", which holds the free developer.nps.gov key as a server-side secret.
+   The key is never shipped in this public repo — see supabase/functions/nps/index.ts. */
 const PARK_BUSES=[
  {n:"Village (Blue)",color:"#2f6fb0",rt:"Visitor Center ↔ lodges, campgrounds, Market Plaza",hrs:"7:00a–9:00p",st:"Running"},
  {n:"Kaibab / Rim (Orange)",color:"#e08a1e",rt:"Visitor Center ↔ Yaki Point / S. Kaibab Trailhead",hrs:"4:30a–1 hr past sunset",st:"Running"},
@@ -959,8 +930,7 @@ function renderFriends(){
     <button class="btn primary sm addfriend" data-h="${esc(h)}">+ Add</button></div>`; }).join('')||'<div class="small">That is everyone around for now. 🙂</div>';
 }
 document.addEventListener('click',e=>{
-  const a=e.target.closest('.addfriend'); if(a){ if(!FRIENDS.includes(a.dataset.h))FRIENDS.push(a.dataset.h); LS.set('canyonsoc_friends',FRIENDS); renderFriends(); renderMe();
-    const who=a.dataset.h; setTimeout(()=>pushNotif({who,ico:'🤝',text:'accepted your friend request',ref:'profile',kind:'friend'}),3000); }
+  const a=e.target.closest('.addfriend'); if(a){ if(!FRIENDS.includes(a.dataset.h))FRIENDS.push(a.dataset.h); LS.set('canyonsoc_friends',FRIENDS); renderFriends(); renderMe(); }
   const u=e.target.closest('.unfriend'); if(u){ FRIENDS=FRIENDS.filter(x=>x!==u.dataset.h); LS.set('canyonsoc_friends',FRIENDS); renderFriends(); renderMe(); if(FEED_FILTER==='friends')renderFeed(); }
 });
 
@@ -990,15 +960,7 @@ $('#feed').addEventListener('click',e=>{ const c=e.target.closest('.cbtn'); if(!
 $('#feed').addEventListener('submit',e=>{ const f=e.target.closest('.caddrow'); if(!f)return; e.preventDefault();
   const id=f.dataset.id, inp=f.querySelector('.cadd'), x=inp.value.trim(); if(!x)return;
   const p=POSTS.find(pp=>pp.id===id); if(!p)return; p.comments.push({h:ME.handle,x,t:'now'}); OPEN_COMMENTS.add(id);
-  renderFeed(); renderMe(); toast('💬 Comment posted');
-  if(p.h!==ME.handle){ const who=p.h; setTimeout(()=>pushNotif({who,ico:'❤️',text:'liked your comment',ref:'home',kind:'react'}),4000); } });
-function simulateEngagement(postId){
-  setTimeout(()=>{ const p=POSTS.find(x=>x.id===postId); if(!p)return; const who=FRIENDS[0]||'mara_k';
-    if(!p.reacts)p.reacts={}; p.reacts['❤️']=(p.reacts['❤️']||0)+1; renderFeed();
-    pushNotif({who,ico:'❤️',text:'liked your post',ref:'home',kind:'react'}); },5000);
-  setTimeout(()=>{ const p=POSTS.find(x=>x.id===postId); if(!p)return; const who=FRIENDS[1]||FRIENDS[0]||'sky_t';
-    p.comments.push({h:who,x:'love this 🙌 @'+ME.handle,t:'now'}); renderFeed();
-    pushNotif({who,ico:'💬',text:'mentioned you in a comment',ref:'home',kind:'mention'}); },9000); }
+  renderFeed(); renderMe(); toast('💬 Comment posted'); });
 $('#feedSeg').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b)return; FEED_FILTER=b.dataset.f;
   $$('#feedSeg button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.f===FEED_FILTER)); renderFeed(); });
 let pendingPostImg='';
@@ -1008,11 +970,29 @@ $('#postImgInput').addEventListener('change',e=>{ readImage(e.target.files[0],90
   $('#postImgPreview').hidden=false; $('#postImgPreview').innerHTML=`<img src="${d}" alt=""><button type="button" id="postImgX" title="Remove">✕</button>`; }); e.target.value=''; });
 document.addEventListener('click',e=>{ if(e.target.closest('#postImgX')) clearPostImg(); });
 $('#postBtn').onclick=()=>{ const ta=$('#composer'),t=ta.value.trim(); if(!t&&!pendingPostImg)return; const id=nid();
-  POSTS.unshift({id,h:ME.handle,t:'now',x:t,img:pendingPostImg||'',media:0,reacts:{},mine:[],comments:[]}); ta.value=''; clearPostImg(); renderFeed(); renderMe(); simulateEngagement(id); };
+  POSTS.unshift({id,h:ME.handle,t:'now',x:t,img:pendingPostImg||'',media:0,reacts:{},mine:[],comments:[]}); ta.value=''; clearPostImg(); renderFeed(); renderMe(); };
 $$('.pill[data-tag]').forEach(p=>p.onclick=()=>{ const ta=$('#composer'); ta.value=(ta.value+' '+p.dataset.tag).trim()+' '; ta.focus(); });
 
 /* ================= sidebar widgets ================= */
-function renderAlerts(){ $('#parkAlerts').innerHTML=PARK_ALERTS.map(a=>`<div class="pa ${a.lvl}"><div class="paico">${a.ico}</div><div><div class="pat">${esc(a.t)}</div><div class="pad">${esc(a.d)}</div></div></div>`).join(''); }
+function renderAlerts(){ const el=$('#parkAlerts');
+  if(!PARK_ALERTS.length){ el.innerHTML='<div class="pa info"><div class="paico">🛰️</div><div><div class="pat">Live park alerts</div><div class="pad" id="paNote">Connecting to the NPS feed…</div></div></div>'; return; }
+  el.innerHTML=PARK_ALERTS.map(a=>`<div class="pa ${a.lvl}"><div class="paico">${a.ico}</div><div><div class="pat">${esc(a.t)}</div><div class="pad">${esc(a.d)}</div></div></div>`).join(''); }
+/* Live NPS alerts via the Supabase Edge Function proxy (key stays server-side).
+   Maps NPS alert categories to our severity/icon. Graceful: leaves the panel's
+   "connecting" note in place if the proxy isn't reachable yet. */
+async function loadParkAlerts(){
+  if(!window.SUPABASE_URL||!window.SUPABASE_KEY) return;
+  try{
+    const r=await fetch(`${window.SUPABASE_URL}/functions/v1/nps?type=alerts`,{headers:{apikey:window.SUPABASE_KEY,Authorization:`Bearer ${window.SUPABASE_KEY}`}});
+    if(!r.ok){ const n=$('#paNote'); if(n) n.textContent=r.status===404?'NPS feed not connected yet.':'NPS feed unavailable right now.'; return; }
+    const j=await r.json(); const data=(j&&(j.data||j.alerts))||[];
+    const ico={Danger:'⛔',Caution:'⚠️',Information:'ℹ️',Closure:'⛔','Park Closure':'⛔'};
+    const lvl={Danger:'crit',Caution:'warn',Information:'info',Closure:'warn','Park Closure':'crit'};
+    PARK_ALERTS=data.map(a=>({lvl:lvl[a.category]||'info',ico:ico[a.category]||'🛰️',t:a.title||a.category||'NPS alert',d:(a.description||'').replace(/\s+/g,' ').trim()})).slice(0,6);
+    if(!PARK_ALERTS.length) PARK_ALERTS=[{lvl:'info',ico:'✓',t:'No active park alerts',d:'NPS reports no current Grand Canyon alerts.'}];
+    renderAlerts();
+  }catch(e){ const n=$('#paNote'); if(n) n.textContent='NPS feed unavailable right now.'; }
+}
 /* live "tonight's sky": moon computed locally; dark-sky window from sunrise-sunset.org
    (keyless, CORS); cloud cover from Open-Meteo. Optional real NPS ranger events. */
 const SYNODIC=29.530588853;
@@ -1047,9 +1027,10 @@ async function loadSky(){
   }catch(e){ $('#skClouds').textContent='—'; }
   loadNpsEvents();
 }
-async function loadNpsEvents(){ const el=$('#skEvents'); if(!window.NPS_API_KEY){ el.innerHTML=''; return; }
-  try{ const j=await (await fetch(`https://developer.nps.gov/api/v1/events?parkCode=grca&api_key=${encodeURIComponent(window.NPS_API_KEY)}&pageSize=20`)).json();
-    const items=(j.data||[]).filter(e=>/star|astronom|night sky|telescope|constellation|dark sky/i.test((e.title||'')+' '+(e.description||''))).slice(0,4);
+async function loadNpsEvents(){ const el=$('#skEvents'); if(!window.SUPABASE_URL||!window.SUPABASE_KEY){ el.innerHTML=''; return; }
+  try{ const r=await fetch(`${window.SUPABASE_URL}/functions/v1/nps?type=events`,{headers:{apikey:window.SUPABASE_KEY,Authorization:`Bearer ${window.SUPABASE_KEY}`}});
+    if(!r.ok){ el.innerHTML=''; return; } const j=await r.json();
+    const items=((j&&(j.data||j.events))||[]).filter(e=>/star|astronom|night sky|telescope|constellation|dark sky/i.test((e.title||'')+' '+(e.description||''))).slice(0,4);
     el.innerHTML=items.length?('<div class="wtitle" style="margin-top:10px">Ranger night-sky programs <span class="small">NPS</span></div>'+items.map(e=>{
       const when=(e.times&&e.times[0]&&e.times[0].timestart)||e.date||''; return `<div class="sky"><span class="when">${esc(when)}</span><span class="what">${esc(e.title||'Program')}<div class="where">${esc(e.location||'Grand Canyon South Rim')}</div></span></div>`; }).join('')):'';
   }catch(e){ el.innerHTML=''; } }
@@ -1065,8 +1046,7 @@ function renderRides(){ $('#rides').innerHTML=RIDES.map(r=>`<div class="ride"><d
   $('#wRides').textContent=RIDES.length+' active'; }
 $('#ridePost').onclick=()=>{ const to=$('#rideTo').value.trim(),when=$('#rideWhen').value.trim(),seats=$('#rideSeats').value.trim();
   if(!to||!when){ $('#rideTo').focus(); return; } RIDES.unshift({to,when,seats:seats||'open',by:ME.handle,co:ME.company,mine:true});
-  LS.set('canyonsoc_rides',RIDES); $('#rideTo').value=$('#rideWhen').value=$('#rideSeats').value=''; renderRides();
-  setTimeout(()=>pushNotif({who:randFriend(),ico:'🚗',text:`wants a seat to ${to}`,ref:'transit',kind:'market'}),6000); };
+  LS.set('canyonsoc_rides',RIDES); $('#rideTo').value=$('#rideWhen').value=$('#rideSeats').value=''; renderRides(); };
 
 /* ================= marketplace ================= */
 let MK_TYPE='All', MK_TAGS=new Set(), MK_Q='', NEW_TAGS=new Set();
@@ -1093,14 +1073,10 @@ $('#mkNewTags').addEventListener('click',e=>{ const b=e.target.closest('.chip');
 $('#mkSearch').addEventListener('input',e=>{ MK_Q=e.target.value.toLowerCase().trim(); renderMarket(); });
 $('#mkPost').onclick=()=>{ const t=$('#mkTitle').value.trim(); if(!t){ $('#mkTitle').focus(); return; }
   MARKET.unshift({t,p:$('#mkPrice').value.trim()||'—',type:$('#mkType').value,tags:[...NEW_TAGS],by:ME.handle,co:ME.company,reacts:{},mine:[]});
-  LS.set('canyonsoc_market',MARKET); $('#mkTitle').value=$('#mkPrice').value=''; NEW_TAGS.clear(); renderNewTags(); MK_TYPE='All'; renderMarket(); renderMe();
-  setTimeout(()=>pushNotif({who:randFriend(),ico:'🪧',text:`is interested in "${t}"`,ref:'marketplace',kind:'market'}),6000); };
+  LS.set('canyonsoc_market',MARKET); $('#mkTitle').value=$('#mkPrice').value=''; NEW_TAGS.clear(); renderNewTags(); MK_TYPE='All'; renderMarket(); renderMe(); };
 
 /* ================= messaging ================= */
-let THREADS=LS.get('canyonsoc_threads',[
- {h:"mara_k",co:"Delaware North",msgs:[{me:false,t:"hey! saw you're new — welcome to the rim 🙂",at:"Mon 9:14a"},{me:false,t:"if you need anything lmk, I'm at Yavapai most days",at:"Mon 9:15a"}],unread:true},
- {h:"trailrunner_lou",co:"Xanterra",msgs:[{me:false,t:"still got that seat to Flagstaff Friday if you want it",at:"Tue 6:02p"}],unread:true},
-]);
+let THREADS=LS.get('canyonsoc_threads',[]);
 let ACTIVE=null;
 const saveThreads=()=>LS.set('canyonsoc_threads',THREADS);
 const unreadCount=()=>THREADS.filter(t=>t.unread).length;
@@ -1128,14 +1104,7 @@ $('#msgImgInput').addEventListener('change',e=>{ if(!ACTIVE){ e.target.value='';
 document.body.addEventListener('click',e=>{ const b=e.target.closest('.act-msg'); if(b&&!b.disabled) openDM(b.dataset.h,b.dataset.co); });
 
 /* ================= notifications + toasts ================= */
-let NOTIFS=LS.get('canyonsoc_notifs',[
- {id:'n1',who:'mara_k',ico:'❤️',text:'liked your post',ref:'home',read:false,t:'5m',kind:'react'},
- {id:'n2',who:'trailrunner_lou',ico:'💬',text:'commented: "see you out there!"',ref:'home',read:false,t:'18m',kind:'comment'},
- {id:'n5',who:'newhire_devon',ico:'🔖',text:'mentioned you in a post',ref:'home',read:false,t:'52m',kind:'mention'},
- {id:'n3',who:'sky_t',ico:'🤝',text:'added you as a friend',ref:'profile',read:false,t:'1h',kind:'friend'},
- {id:'n6',who:'jen_a',ico:'🪧',text:'is interested in your listing',ref:'marketplace',read:true,t:'1h',kind:'market'},
- {id:'n4',who:'mara_k',ico:'✉️',text:'sent you a message',ref:'messages',read:true,t:'2h',kind:'message'},
-]);
+let NOTIFS=LS.get('canyonsoc_notifs',[]);
 const saveNotifs=()=>LS.set('canyonsoc_notifs',NOTIFS);
 const notifUnread=()=>NOTIFS.filter(n=>!n.read).length;
 function updateBell(){ const b=$('#nbadge'),n=notifUnread(); b.textContent=n>9?'9+':n; b.classList.toggle('show',n>0); }
@@ -1154,10 +1123,9 @@ $('#notifList').addEventListener('click',e=>{ const r=e.target.closest('.nrow');
   $('#notifPanel').classList.remove('open'); if(r.dataset.ref) show(r.dataset.ref); });
 document.addEventListener('click',e=>{ if(!e.target.closest('#notifPanel')&&!e.target.closest('#btnBell')) $('#notifPanel').classList.remove('open'); });
 
-/* full notifications view + per-type filters + ambient activity */
+/* full notifications view + per-type filters */
 let NOTIF_FILTER='all';
 const NKINDS=[['all','All'],['react','Reactions'],['comment','Comments'],['mention','Mentions'],['friend','Friends'],['message','Messages'],['market','Market']];
-function randFriend(){ const pool=FRIENDS.length?FRIENDS:Object.keys(PEOPLE); return pool[Math.floor(Math.random()*pool.length)]; }
 function renderNotifFull(){ if(!$('#notifFilters'))return;
   $('#notifFilters').innerHTML=NKINDS.map(([k,label])=>{ const c=k==='all'?NOTIFS.length:NOTIFS.filter(n=>(n.kind||'react')===k).length;
     return `<button class="cat" data-k="${k}" aria-pressed="${NOTIF_FILTER===k}">${label}${c?` <span class="small">${c}</span>`:''}</button>`; }).join('');
@@ -1170,13 +1138,6 @@ $('#notifFull').addEventListener('click',e=>{ const r=e.target.closest('.nrow');
   if(n){ n.read=true; saveNotifs(); updateBell(); renderNotifs(); renderNotifFull(); } if(r.dataset.ref&&r.dataset.ref!=='notifications') show(r.dataset.ref); });
 $('#notifClearAll').onclick=()=>{ NOTIFS.forEach(n=>n.read=true); saveNotifs(); renderNotifs(); renderNotifFull(); updateBell(); };
 $('#notifSeeAll').onclick=()=>{ $('#notifPanel').classList.remove('open'); renderNotifFull(); show('notifications'); };
-let ambientCount=0;
-function ambientTick(){ if(document.hidden||ambientCount>=6) return; ambientCount++;
-  const acts=[{ico:'❤️',text:'liked your post',ref:'home',kind:'react'},{ico:'🔥',text:'reacted to your photo',ref:'profile',kind:'react'},
-    {ico:'💬',text:'replied in a thread you follow',ref:'home',kind:'comment'},{ico:'🪧',text:'posted a new listing',ref:'marketplace',kind:'market'},
-    {ico:'🚗',text:'posted a ride to Flagstaff',ref:'transit',kind:'market'}];
-  pushNotif({who:randFriend(),...acts[Math.floor(Math.random()*acts.length)]}, true); }
-setInterval(ambientTick, 50000);
 
 /* ================= tabs / palette / theme ================= */
 function show(v){ $$('.view').forEach(x=>x.classList.toggle('active',x.id==='view-'+v));
@@ -1287,7 +1248,14 @@ async function initSupabase(){ if(!window.SUPABASE_URL||!window.SUPABASE_KEY) re
 function updateAuthUI(){ const b=$('#btnAuth'); if(!b)return;
   if(AUTH_USER){ b.textContent='@'+(ME.handle||'you'); b.classList.remove('primary'); b.title='Signed in — click to sign out'; }
   else { b.textContent='Sign in'; b.classList.add('primary'); b.title='Sign in'; } }
-function handleAuth(session){ AUTH_USER=session?session.user:null; updateAuthUI(); if(AUTH_USER) loadProfileFromCloud(); }
+function handleAuth(session){ AUTH_USER=session?session.user:null; updateAuthUI(); if(AUTH_USER) loadProfileFromCloud(); loadDirectory(); }
+/* Real people directory: every profile in Supabase becomes a searchable/mentionable
+   user. Read-only, public per RLS. Excludes me (ME is merged in by peopleAll). */
+async function loadDirectory(){ if(!sb) return;
+  const { data,error }=await sb.from('profiles').select('handle,name,company,job,bio,pic_url');
+  if(error){ console.warn('directory load:',error); return; }
+  const next={}; (data||[]).forEach(p=>{ if(p.handle&&p.handle!==ME.handle) next[p.handle]={name:p.name||('@'+p.handle),co:p.company||'',job:p.job||'',bio:p.bio||'',pic:p.pic_url||''}; });
+  PEOPLE=next; renderFriends(); renderConvs(); }
 async function loadProfileFromCloud(){ if(!sb||!AUTH_USER)return;
   const { data,error }=await sb.from('profiles').select('*').eq('user_id',AUTH_USER.id).maybeSingle();
   if(error){ console.warn('profile load:',error); return; }
@@ -1316,8 +1284,8 @@ initProfileForm(); renderMe(); renderFeed(); renderAlerts(); renderBuses(); rend
 renderNewTags(); renderMarket(); renderPhotos(); renderParks(); renderFriends(); renderConvs(); updateDM();
 renderNotifs(); renderNotifFull(); updateBell();
 $$('.reveal').forEach(el=>requestAnimationFrame(()=>el.classList.add('in')));
-loadWeather(); loadAlerts(); loadSky(); initSupabase();
-setInterval(loadWeather,600000); setInterval(loadAlerts,900000); setInterval(loadSky,3600000);
+loadWeather(); loadAlerts(); loadSky(); loadParkAlerts(); initSupabase();
+setInterval(loadWeather,600000); setInterval(loadAlerts,900000); setInterval(loadSky,3600000); setInterval(loadParkAlerts,1800000);
 </script>
 </body>
 </html>
