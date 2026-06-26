@@ -491,7 +491,7 @@ footer b{color:var(--fg)}
       </div>
       <div class="widget">
         <div class="wtitle">Getting around</div>
-        <div class="kv"><span>Park buses (NPS)</span><strong style="color:var(--ok)">4 routes</strong></div>
+        <div class="kv"><span>Park buses (NPS)</span><strong style="color:var(--ok)">5 routes</strong></div>
         <div class="kv"><span>Ride share posts</span><strong id="wRides">—</strong></div>
         <button class="btn sm" style="margin-top:10px; width:100%" data-goto="transit">Open transit &amp; rides →</button>
       </div>
@@ -506,10 +506,11 @@ footer b{color:var(--fg)}
   <!-- ============ TRANSIT & RIDES ============ -->
   <div class="view" id="view-transit">
     <article class="panel reveal">
-      <header><span class="badge"><span class="spark"></span> PARK BUSES</span> NPS shuttle routes · free <span class="demo-pill">schedule via NPS</span></header>
+      <header><span class="badge"><span class="spark"></span> PARK BUSES</span> NPS shuttle routes · free <span class="demo-pill">NPS published schedule</span></header>
       <div class="body">
         <p class="small" style="margin-top:0">The free National Park Service shuttle buses, color-coded by route. Public park system — no fare, no reservation.</p>
         <div id="parkBuses"></div>
+        <p class="small" style="margin:10px 0 0; opacity:.8">Summer 2026 schedule (May 23–Sep 11) — hours shift by season, so confirm at <a href="https://www.nps.gov/grca/planyourvisit/shuttle-buses.htm" target="_blank" rel="noopener" style="color:var(--clay-bright)">nps.gov</a>. Any active closures show in the Alerts panel above.</p>
       </div>
     </article>
     <article class="panel reveal">
@@ -544,6 +545,7 @@ footer b{color:var(--fg)}
           <div class="col"><div class="wtitle">Flagstaff → Grand Canyon</div><div id="gToGC"></div></div>
         </div>
         <p class="small" style="margin:10px 0 0">✈️ Flying out of <b>Phoenix Sky Harbor (PHX)</b>? Connect at Flagstaff to Groome's Flagstaff↔PHX line (every ~1–2 hr, ~2½ hr each way).</p>
+        <p class="small" style="margin:8px 0 0; opacity:.8">Times current as of June 2026 — schedules change seasonally, so confirm when booking.</p>
         <a class="btn sm primary" style="margin-top:12px; display:inline-block; text-decoration:none" href="https://groometransportation.com/grand-canyon/" target="_blank" rel="noopener">Book on groometransportation.com →</a>
       </div>
     </article>
@@ -815,11 +817,15 @@ let PARK_ALERTS=[];
 /* NPS data (park alerts + ranger night-sky events) comes through the Supabase Edge
    Function "nps", which holds the free developer.nps.gov key as a server-side secret.
    The key is never shipped in this public repo — see supabase/functions/nps/index.ts. */
+/* NPS South Rim shuttle routes. Published schedule (nps.gov/grca), NOT a live feed —
+   no NPS shuttle API exists. Verified against the Summer 2026 schedule (May 23–Sep 11)
+   on 2026-06-26. Hours shift seasonally; live closures surface in the Alerts panel. */
 const PARK_BUSES=[
- {n:"Village (Blue)",color:"#2f6fb0",rt:"Visitor Center ↔ lodges, campgrounds, Market Plaza",hrs:"7:00a–9:00p",st:"Running"},
- {n:"Kaibab / Rim (Orange)",color:"#e08a1e",rt:"Visitor Center ↔ Yaki Point / S. Kaibab Trailhead",hrs:"4:30a–1 hr past sunset",st:"Running"},
- {n:"Hermits Rest (Red)",color:"#c0392b",rt:"Village ↔ Hermits Rest · 7 mi · 9 overlooks",hrs:"Mar 1–Nov 30",st:"Running"},
- {n:"Tusayan (Purple)",color:"#7d4ea3",rt:"Visitor Center ↔ Tusayan gateway",hrs:"Summer only",st:"Seasonal"},
+ {n:"Village (Blue)",color:"#2f6fb0",rt:"Visitor Center ↔ lodges, campgrounds, Market Plaza",hrs:"6:30a–9:30p",st:"Running"},
+ {n:"Kaibab / Rim (Orange)",color:"#e08a1e",rt:"Mather Point ↔ Yaki Point / S. Kaibab Trailhead",hrs:"5:00a–sunset+1hr",st:"Running"},
+ {n:"Hermits Rest (Red)",color:"#c0392b",rt:"Village ↔ Hermits Rest · 7 mi · 9 overlooks",hrs:"8:00a–sunset+1hr",st:"Running"},
+ {n:"Hikers' Express",color:"#3a7d44",rt:"Bright Angel Lodge → S. Kaibab Trailhead (via Backcountry Info + VC)",hrs:"4 / 5 / 6 am",st:"Running"},
+ {n:"Tusayan (Purple)",color:"#7d4ea3",rt:"Visitor Center ↔ Tusayan gateway · 6.8 mi",hrs:"8:00a–9:00p · summer",st:"Running"},
 ];
 const EMP_SHUTTLE=[
  {w:"DNC — Route A",what:"Staff housing ↔ Yavapai / Market Plaza",by:"schedule pending"},
