@@ -279,6 +279,39 @@ body{margin:0; color:var(--fg); overflow-x:hidden; background:var(--bg);
 .result:hover{background:color-mix(in oklab,var(--clay) 12%, transparent)}
 .kbd{display:inline-block; border:1px solid var(--border); border-radius:6px; padding:2px 6px; font-size:11.5px; background:color-mix(in oklab,var(--bg) 40%, transparent)}
 
+/* notifications + bell */
+.bell{position:relative; flex:none; font-size:15px}
+.nbadge{position:absolute; top:-6px; right:-6px; min-width:18px; height:18px; padding:0 4px; border-radius:9px; background:var(--err); color:#fff; font-size:10.5px; font-weight:900; display:none; place-items:center; line-height:1; border:2px solid var(--bg-2)}
+.nbadge.show{display:grid}
+.notifwrap{position:fixed; top:64px; right:14px; width:min(380px,94vw); z-index:75; display:none}
+.notifwrap.open{display:block}
+.notifwrap .panel{max-height:72vh; overflow:auto}
+.notifwrap header{position:sticky; top:0; z-index:1; background:color-mix(in oklab,var(--term) 96%, transparent); backdrop-filter:blur(6px)}
+.nrow{display:grid; grid-template-columns:40px 1fr auto; gap:11px; align-items:center; padding:11px 14px; border-top:1px solid var(--border); cursor:pointer}
+.nrow:hover{background:color-mix(in oklab,var(--clay) 9%, transparent)}
+.nrow.unread{background:color-mix(in oklab,var(--clay) 13%, transparent)}
+.nrow .nico{position:relative} .nrow .nico .avi{width:40px; height:40px; font-size:13px; border-radius:11px}
+.nrow .nbubble{position:absolute; bottom:-4px; right:-4px; font-size:14px; filter:drop-shadow(0 1px 2px rgba(0,0,0,.5))}
+.nrow .ntext{font-size:13.5px; line-height:1.4} .nrow .ntext b{font-weight:800}
+.nrow .ntime{font-size:11px; color:var(--muted); white-space:nowrap}
+@media(max-width:720px){ .notifwrap{top:58px; right:8px; left:8px; width:auto} }
+
+/* comments */
+.comments{display:none; margin-top:10px; border-top:1px dashed var(--border); padding-top:10px}
+.comments.open{display:block}
+.cmt{display:grid; grid-template-columns:32px 1fr; gap:9px; padding:7px 0}
+.cmt .avi{width:32px; height:32px; font-size:12px; border-radius:9px}
+.cmt .ch{font-weight:800; font-size:13px}
+.cmt .ctext{font-size:13.5px; margin-top:1px; word-break:break-word; white-space:pre-wrap}
+.caddrow{display:flex; gap:8px; margin-top:8px}
+.caddrow .cadd{flex:1; border:1px solid var(--border); background:color-mix(in oklab,var(--bg) 50%, transparent); color:var(--fg); border-radius:10px; padding:8px 11px; outline:none; font:inherit; font-size:13.5px}
+.caddrow .cadd:focus{border-color:color-mix(in oklab,var(--clay) 55%, var(--border))}
+
+/* toasts */
+.toasts{position:fixed; left:50%; transform:translateX(-50%); bottom:18px; z-index:95; display:flex; flex-direction:column; gap:8px; align-items:center; pointer-events:none; width:max-content; max-width:92vw}
+.toast{background:color-mix(in oklab,var(--term) 96%, transparent); border:1px solid var(--border); border-radius:12px; padding:10px 15px; box-shadow:var(--card-shadow); font-size:13.5px; font-weight:700; display:flex; gap:8px; align-items:center; backdrop-filter:blur(8px); animation:toastin .25s ease}
+@keyframes toastin{from{opacity:0; transform:translateY(8px)}to{opacity:1; transform:none}}
+
 .reveal{opacity:0; transform:translateY(10px); transition:opacity .5s ease, transform .5s ease}
 .reveal.in{opacity:1; transform:none}
 footer{text-align:center; color:var(--muted); padding:26px 14px 70px; font-size:12.5px; position:relative; z-index:1}
@@ -322,11 +355,20 @@ footer b{color:var(--fg)}
     <button class="tab" data-view="messages">Messages<span class="dm-dot"></span></button>
     <button class="tab" data-view="profile">Profile</button>
   </div>
+  <button id="btnBell" class="btn sm bell" title="Notifications" aria-label="Notifications">🔔<span class="nbadge" id="nbadge"></span></button>
   <div class="navbtns">
     <button id="btnTheme" class="btn sm" title="Day/Night (T)">☀︎ / ☾</button>
     <button id="btnPalette" class="btn sm" title="Command Palette (⌘/Ctrl+K)">⌘K</button>
   </div>
 </nav>
+
+<div class="notifwrap" id="notifPanel">
+  <div class="panel">
+    <header><span class="badge"><span class="spark"></span> 🔔 ALERTS</span> Notifications <button class="btn ghost sm" id="notifClear" style="margin-left:auto">Mark all read</button></header>
+    <div id="notifList"></div>
+  </div>
+</div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
 
 <div class="strip" id="strip" aria-label="Live conditions">
   <span><span class="dotpulse"></span><span class="live">LIVE</span> · South Rim</span>
@@ -717,11 +759,11 @@ let RIDES=LS.get('canyonsoc_rides',[
 ]);
 let _pid=1; const nid=()=>'p'+(_pid++);
 let POSTS=[
- {id:nid(),h:"mara_k",t:"6m",x:"Killer light on the rim trail right now — if you're off shift, go. 🌄",media:1,reacts:{'❤️':12,'🔥':6},mine:[]},
- {id:nid(),h:"trailrunner_lou",t:"22m",x:"Backcountry Office opens 8am for walk-up permits. Got South Kaibab this weekend — anyone want to split the rim-to-rim shuttle?",media:0,reacts:{'👍':5},mine:[]},
- {id:nid(),h:"sky_t",t:"1h",x:"Condor 4-7 perched over Lookout Studio all morning. Bring binos. 🦅",media:0,reacts:{'😮':9,'❤️':14},mine:[]},
- {id:nid(),h:"jen_a",t:"2h",x:"Found a set of keys with a blue carabiner near Market Plaza. DM me to claim.",media:0,reacts:{'👍':3},mine:[]},
- {id:nid(),h:"newhire_devon",t:"3h",x:"First week living up here done. The night sky alone is worth it. Any rec for a cheap used bike?",media:0,reacts:{'🌵':7,'❤️':4},mine:[]},
+ {id:nid(),h:"mara_k",t:"6m",x:"Killer light on the rim trail right now — if you're off shift, go. 🌄",media:1,reacts:{'❤️':12,'🔥':6},mine:[],comments:[{h:"sky_t",x:"That light was unreal tonight 🔥",t:"4m"}]},
+ {id:nid(),h:"trailrunner_lou",t:"22m",x:"Backcountry Office opens 8am for walk-up permits. Got South Kaibab this weekend — anyone want to split the rim-to-rim shuttle?",media:0,reacts:{'👍':5},mine:[],comments:[]},
+ {id:nid(),h:"sky_t",t:"1h",x:"Condor 4-7 perched over Lookout Studio all morning. Bring binos. 🦅",media:0,reacts:{'😮':9,'❤️':14},mine:[],comments:[{h:"jen_a",x:"Saw it too — incredible.",t:"40m"},{h:"newhire_devon",x:"Adding binos to the marketplace search lol",t:"31m"}]},
+ {id:nid(),h:"jen_a",t:"2h",x:"Found a set of keys with a blue carabiner near Market Plaza. DM me to claim.",media:0,reacts:{'👍':3},mine:[],comments:[]},
+ {id:nid(),h:"newhire_devon",t:"3h",x:"First week living up here done. The night sky alone is worth it. Any rec for a cheap used bike?",media:0,reacts:{'🌵':7,'❤️':4},mine:[],comments:[]},
 ];
 const TYPES=['All','For sale','ISO','Events','Announcements','Free','Yard sale'];
 const TAGS=['Cars','Computers','Clothes','Furniture','Outdoor gear','Bikes','Housing','Tickets','Tools','Appliances','Free stuff','Misc'];
@@ -863,20 +905,41 @@ document.addEventListener('click',e=>{
 
 /* ================= feed ================= */
 let FEED_FILTER='all';
-function postHTML(p){ const pe=person(p.h); const media=p.media?`<div class="media" style="background:linear-gradient(135deg,${coColor(pe.co)},color-mix(in oklab,${coColor(pe.co)} 35%,#000))"></div>`:'';
+let OPEN_COMMENTS=new Set();
+function postHTML(p){ const pe=person(p.h); if(!p.comments)p.comments=[];
+  const media=p.media?`<div class="media" style="background:linear-gradient(135deg,${coColor(pe.co)},color-mix(in oklab,${coColor(pe.co)} 35%,#000))"></div>`:'';
+  const cmts=p.comments.map(c=>{ const ce=person(c.h); return `<div class="cmt">${avi(c.h,ce.co,32,9)}<div><span class="ch">@${esc(c.h)}</span> <span class="meta">· ${esc(c.t)}</span><div class="ctext">${esc(c.x)}</div></div></div>`; }).join('');
   return `<div class="post">${avi(p.h,pe.co,46,12)}<div>
     <div class="handle">@${esc(p.h)}<span class="co">${esc(pe.co)} · ${esc(pe.job)}</span> <span class="meta">· ${esc(p.t)}</span></div>
     <div class="text">${esc(p.x)}</div>${media}
     ${reactsHTML(p,'post',p.id)}
-    <div class="actions"><button class="icon-btn">💬 Reply</button><button class="icon-btn">↗ Share</button>
+    <div class="actions"><button class="icon-btn cbtn" data-id="${p.id}">💬 <span>${p.comments.length}</span></button>
+      <button class="icon-btn">↗ Share</button>
       ${p.h!==ME.handle?`<button class="icon-btn act-msg" data-h="${esc(p.h)}" data-co="${esc(pe.co)}">✉ Message</button>`:''}</div>
+    <div class="comments ${OPEN_COMMENTS.has(p.id)?'open':''}">${cmts}
+      <form class="caddrow" data-id="${p.id}"><input class="cadd" placeholder="Write a comment…" autocomplete="off" /><button class="btn sm primary" type="submit">Reply</button></form>
+    </div>
   </div></div>`; }
 function renderFeed(){ let list=POSTS; if(FEED_FILTER==='friends') list=POSTS.filter(p=>FRIENDS.includes(p.h)||p.h===ME.handle);
   $('#feed').innerHTML=list.map(postHTML).join('')||'<div class="post"><div></div><div class="small">No posts from friends yet. Add friends on your profile, or switch to All.</div></div>'; }
+$('#feed').addEventListener('click',e=>{ const c=e.target.closest('.cbtn'); if(!c)return; const id=c.dataset.id;
+  OPEN_COMMENTS.has(id)?OPEN_COMMENTS.delete(id):OPEN_COMMENTS.add(id); renderFeed();
+  if(OPEN_COMMENTS.has(id)){ const inp=$('#feed .comments.open .cadd'); if(inp) inp.focus(); } });
+$('#feed').addEventListener('submit',e=>{ const f=e.target.closest('.caddrow'); if(!f)return; e.preventDefault();
+  const id=f.dataset.id, inp=f.querySelector('.cadd'), x=inp.value.trim(); if(!x)return;
+  const p=POSTS.find(pp=>pp.id===id); if(!p)return; p.comments.push({h:ME.handle,x,t:'now'}); OPEN_COMMENTS.add(id);
+  renderFeed(); renderMe(); toast('💬 Comment posted'); });
+function simulateEngagement(postId){
+  setTimeout(()=>{ const p=POSTS.find(x=>x.id===postId); if(!p)return; const who=FRIENDS[0]||'mara_k';
+    if(!p.reacts)p.reacts={}; p.reacts['❤️']=(p.reacts['❤️']||0)+1; renderFeed();
+    pushNotif({who,ico:'❤️',text:'liked your post',ref:'home'}); },5000);
+  setTimeout(()=>{ const p=POSTS.find(x=>x.id===postId); if(!p)return; const who=FRIENDS[1]||FRIENDS[0]||'sky_t';
+    p.comments.push({h:who,x:'love this 🙌',t:'now'}); renderFeed();
+    pushNotif({who,ico:'💬',text:'commented on your post',ref:'home'}); },9000); }
 $('#feedSeg').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b)return; FEED_FILTER=b.dataset.f;
   $$('#feedSeg button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.f===FEED_FILTER)); renderFeed(); });
-$('#postBtn').onclick=()=>{ const ta=$('#composer'),t=ta.value.trim(); if(!t)return;
-  POSTS.unshift({id:nid(),h:ME.handle,t:'now',x:t,media:0,reacts:{},mine:[]}); ta.value=''; renderFeed(); renderMe(); };
+$('#postBtn').onclick=()=>{ const ta=$('#composer'),t=ta.value.trim(); if(!t)return; const id=nid();
+  POSTS.unshift({id,h:ME.handle,t:'now',x:t,media:0,reacts:{},mine:[],comments:[]}); ta.value=''; renderFeed(); renderMe(); simulateEngagement(id); };
 $$('.pill[data-tag]').forEach(p=>p.onclick=()=>{ const ta=$('#composer'); ta.value=(ta.value+' '+p.dataset.tag).trim()+' '; ta.focus(); });
 
 /* ================= sidebar widgets ================= */
@@ -989,6 +1052,31 @@ $('#tcompose').addEventListener('submit',e=>{ e.preventDefault(); const inp=$('#
   const th=THREADS.find(x=>x.h===ACTIVE); th.msgs.push({me:true,t,at:new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}); saveThreads(); inp.value=''; selectConv(ACTIVE); });
 document.body.addEventListener('click',e=>{ const b=e.target.closest('.act-msg'); if(b&&!b.disabled) openDM(b.dataset.h,b.dataset.co); });
 
+/* ================= notifications + toasts ================= */
+let NOTIFS=LS.get('canyonsoc_notifs',[
+ {id:'n1',who:'mara_k',ico:'❤️',text:'liked your post',ref:'home',read:false,t:'5m'},
+ {id:'n2',who:'trailrunner_lou',ico:'💬',text:'commented: "see you out there!"',ref:'home',read:false,t:'18m'},
+ {id:'n3',who:'sky_t',ico:'👋',text:'added you as a friend',ref:'profile',read:false,t:'1h'},
+ {id:'n4',who:'jen_a',ico:'✉️',text:'sent you a message',ref:'messages',read:true,t:'2h'},
+]);
+const saveNotifs=()=>LS.set('canyonsoc_notifs',NOTIFS);
+const notifUnread=()=>NOTIFS.filter(n=>!n.read).length;
+function updateBell(){ const b=$('#nbadge'),n=notifUnread(); b.textContent=n>9?'9+':n; b.classList.toggle('show',n>0); }
+function renderNotifs(){ $('#notifList').innerHTML=NOTIFS.map(n=>`<div class="nrow ${n.read?'':'unread'}" data-id="${n.id}" data-ref="${n.ref||'home'}">
+   <div class="nico">${avi(n.who||'?',person(n.who||'').co,40,11)}<span class="nbubble">${n.ico||'🔔'}</span></div>
+   <div class="ntext"><b>@${esc(n.who||'CanyonSoc')}</b> ${esc(n.text)}</div><div class="ntime">${esc(n.t)}</div></div>`).join('')
+   ||'<div class="nrow"><div></div><div class="small">No notifications yet.</div><div></div></div>'; }
+function pushNotif(o){ NOTIFS.unshift({id:'n'+Date.now()+Math.round(Math.random()*1e4),read:false,t:'now',...o}); saveNotifs(); renderNotifs(); updateBell();
+  toast(`${o.ico||'🔔'} <b>@${esc(o.who||'')}</b> ${esc(o.text)}`); }
+function toast(html){ const t=document.createElement('div'); t.className='toast'; t.innerHTML=html; $('#toasts').appendChild(t);
+  setTimeout(()=>{ t.style.transition='opacity .3s'; t.style.opacity='0'; setTimeout(()=>t.remove(),300); },3800); }
+$('#btnBell').onclick=e=>{ e.stopPropagation(); const p=$('#notifPanel'); if(p.classList.toggle('open')) renderNotifs(); };
+$('#notifClear').onclick=e=>{ e.stopPropagation(); NOTIFS.forEach(n=>n.read=true); saveNotifs(); renderNotifs(); updateBell(); };
+$('#notifList').addEventListener('click',e=>{ const r=e.target.closest('.nrow'); if(!r||!r.dataset.id)return;
+  const n=NOTIFS.find(x=>x.id===r.dataset.id); if(n){ n.read=true; saveNotifs(); updateBell(); }
+  $('#notifPanel').classList.remove('open'); if(r.dataset.ref) show(r.dataset.ref); });
+document.addEventListener('click',e=>{ if(!e.target.closest('#notifPanel')&&!e.target.closest('#btnBell')) $('#notifPanel').classList.remove('open'); });
+
 /* ================= tabs / palette / theme ================= */
 function show(v){ $$('.view').forEach(x=>x.classList.toggle('active',x.id==='view-'+v));
   $$('.tab').forEach(t=>t.setAttribute('aria-current',t.dataset.view===v?'page':'false'));
@@ -1011,7 +1099,7 @@ function openPal(){ palette.classList.add('open'); palInput.value=''; renderPal(
 function closePal(){ palette.classList.remove('open'); }
 function renderPal(it){ palResults.innerHTML=it.map(c=>`<div class="result" data-cmd="${c[1]}">${c[0]}<span class="kbd">↵</span></div>`).join('')||'<div class="result">No matches</div>'; }
 $('#btnPalette').onclick=openPal; $('#fabPalette').onclick=openPal;
-addEventListener('keydown',e=>{ if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){ e.preventDefault(); openPal(); } if(e.key==='Escape'){ closePal(); $('#lightbox').classList.remove('open'); } });
+addEventListener('keydown',e=>{ if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){ e.preventDefault(); openPal(); } if(e.key==='Escape'){ closePal(); $('#lightbox').classList.remove('open'); $('#notifPanel').classList.remove('open'); } });
 palInput.addEventListener('input',()=>{ const q=palInput.value.toLowerCase(); renderPal(CMDS.filter(c=>c[0].toLowerCase().includes(q))); });
 palResults.addEventListener('click',e=>{ const r=e.target.closest('.result'); if(r&&r.dataset.cmd) runCmd(r.dataset.cmd); });
 palInput.addEventListener('keydown',e=>{ if(e.key==='Enter'){ const r=palResults.querySelector('.result[data-cmd]'); if(r) runCmd(r.dataset.cmd); }});
@@ -1037,6 +1125,7 @@ async function loadAlerts(){ const el=$('#alertsList'); try{
 /* ================= boot ================= */
 initProfileForm(); renderMe(); renderFeed(); renderAlerts(); renderBuses(); renderRides();
 renderNewTags(); renderMarket(); renderPhotos(); renderParks(); renderFriends(); renderConvs(); updateDM();
+renderNotifs(); updateBell();
 $$('.reveal').forEach(el=>requestAnimationFrame(()=>el.classList.add('in')));
 loadWeather(); loadAlerts(); loadSky();
 setInterval(loadWeather,600000); setInterval(loadAlerts,900000); setInterval(loadSky,3600000);
