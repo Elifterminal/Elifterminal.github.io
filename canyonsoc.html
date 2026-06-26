@@ -536,13 +536,14 @@ footer b{color:var(--fg)}
       </div>
     </article>
     <article class="panel reveal">
-      <header><span class="badge"><span class="spark"></span> GROOME</span> Groome Transportation → Flagstaff <span class="demo-pill">live web schedule</span></header>
+      <header><span class="badge"><span class="spark"></span> GROOME</span> Groome airport shuttle <span class="demo-pill">official schedule</span></header>
       <div class="body">
-        <p class="small" style="margin-top:0">Door-to-door van between the Grand Canyon (Tusayan IMAX) and Flagstaff (Amtrak / airport). Three round-trips daily · ~1.5 hr · <a href="tel:9283508466" style="color:var(--clay-bright)">928-350-8466</a>.</p>
+        <p class="small" style="margin-top:0">Door-to-door van between the Grand Canyon (Tusayan IMAX) and Flagstaff — stopping at <b>Flagstaff Pulliam Airport (FLG)</b>, the Amtrak depot, and downtown. Three round-trips daily · ~2 hr · <a href="tel:9283508466" style="color:var(--clay-bright)">928-350-8466</a>. Fares ~$49–$59 + $8 park fee · book ≥24 hr ahead.</p>
         <div class="gtimes">
-          <div class="col"><div class="wtitle">Grand Canyon → Flagstaff</div><div id="gToFlag"></div></div>
+          <div class="col"><div class="wtitle">Grand Canyon → Flagstaff (FLG)</div><div id="gToFlag"></div></div>
           <div class="col"><div class="wtitle">Flagstaff → Grand Canyon</div><div id="gToGC"></div></div>
         </div>
+        <p class="small" style="margin:10px 0 0">✈️ Flying out of <b>Phoenix Sky Harbor (PHX)</b>? Connect at Flagstaff to Groome's Flagstaff↔PHX line (every ~1–2 hr, ~2½ hr each way).</p>
         <a class="btn sm primary" style="margin-top:12px; display:inline-block; text-decoration:none" href="https://groometransportation.com/grand-canyon/" target="_blank" rel="noopener">Book on groometransportation.com →</a>
       </div>
     </article>
@@ -824,8 +825,13 @@ const EMP_SHUTTLE=[
  {w:"DNC — Route A",what:"Staff housing ↔ Yavapai / Market Plaza",by:"schedule pending"},
  {w:"Xanterra — Route 1",what:"Dorms ↔ historic lodges (El Tovar, Bright Angel)",by:"schedule pending"},
 ];
-const GROOME_TOFLAG=[["10:15a","12:00p"],["3:30p","5:15p"],["6:30p","8:15p"]];
-const GROOME_TOGC=[["7:45a","9:15a"],["12:45p","2:30p"],["3:45p","5:30p"]];
+/* Real Groome Transportation schedule (groometransportation.com/grand-canyon).
+   Grand Canyon = Tusayan IMAX stop. Flagstaff "airport" = Pulliam Airport (FLG);
+   the run also stops at the Amtrak depot/Groome office a few min later.
+   Verified 2026-06-26. Three round-trips daily; connects at Flagstaff to Groome's
+   Phoenix Sky Harbor (PHX) line. */
+const GROOME_TOFLAG=[["10:15a","11:45a"],["3:30p","5:00p"],["6:30p","8:00p"]];  // GC IMAX → Flagstaff FLG
+const GROOME_TOGC=[["7:45a","9:15a"],["12:45p","2:30p"],["3:45p","5:30p"]];      // Flagstaff → GC IMAX
 
 /* ================= reactions (shared) ================= */
 function reactsHTML(o,kind,id){ if(!o.reacts)o.reacts={}; if(!o.mine)o.mine=[];
