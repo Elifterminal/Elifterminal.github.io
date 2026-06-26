@@ -363,11 +363,21 @@ footer b{color:var(--fg)}
         <header><span class="badge"><span class="spark"></span> 📌 PINNED</span> Park alerts <span class="demo-pill">NPS feed</span></header>
         <div class="body" id="parkAlerts"></div>
       </aside>
-      <!-- Sky Party schedule -->
+      <!-- Tonight's Sky — live astronomy -->
       <aside class="panel">
-        <header><span class="badge"><span class="spark"></span> 🔭 SKY PARTY</span> Night sky programs <span class="demo-pill">NPS</span></header>
-        <div class="body" id="skyParty"></div>
-        <div class="body small" style="border-top:1px solid var(--border)">Grand Canyon Star Party &amp; ranger night-sky talks. Dark skies — give your eyes 20 min to adjust.</div>
+        <header><span class="badge"><span class="spark"></span> 🔭 TONIGHT'S SKY</span> Stargazing <span class="demo-pill" id="skyLive">live</span></header>
+        <div class="body">
+          <div class="kv"><span>Moon</span><strong id="skMoon">…</strong></div>
+          <div class="kv"><span>Dark-sky window</span><strong id="skDark">…</strong></div>
+          <div class="kv"><span>Sunset</span><strong id="skSunset">…</strong></div>
+          <div class="kv"><span>First light</span><strong id="skDawn">…</strong></div>
+          <div class="kv"><span>Sky tonight</span><strong id="skClouds">…</strong></div>
+          <div id="skEvents"></div>
+        </div>
+        <div class="body small" style="border-top:1px solid var(--border)">
+          <b>Grand Canyon Star Party</b> — free, annual, ~early–mid June around the new moon; telescopes nightly on the South Rim by the Visitor Center.
+          <a href="https://www.nps.gov/grca/planyourvisit/grand-canyon-star-party.htm" target="_blank" rel="noopener" style="color:var(--clay-bright)">Official NPS page →</a>
+        </div>
       </aside>
     </div>
 
@@ -732,12 +742,9 @@ const PARK_ALERTS=[
  {lvl:"warn",ico:"⛔",t:"North Kaibab Trail closure begins Oct 15",d:"Hard closure to ~Feb 2027 for waterline rehab — route via Bright Angel."},
  {lvl:"info",ico:"🔥",t:"South Rim fire restrictions lifted",d:"Campfires in established rings only — status can change fast in summer."},
 ];
-const SKY_PARTY=[
- {when:"Tonight · 8:30p",what:"Constellation tour with a ranger",where:"GC Visitor Center plaza"},
- {when:"Tonight · 9:00p",what:"Telescope viewing — Saturn & the Moon",where:"Behind the Visitor Center"},
- {when:"Fri · 8:00p",what:"Night-sky photography basics",where:"Mather Point"},
- {when:"Sat · 9:30p",what:"Milky Way rise — dark-sky walk",where:"Yavapai Point"},
-];
+/* Optional: set a free NPS API key (developer.nps.gov) to pull real ranger night-sky
+   programs. Left blank on purpose — never commit a key into this public repo. */
+window.NPS_API_KEY = window.NPS_API_KEY || "";
 const PARK_BUSES=[
  {n:"Village (Blue)",color:"#2f6fb0",rt:"Visitor Center ↔ lodges, campgrounds, Market Plaza",hrs:"7:00a–9:00p",st:"Running"},
  {n:"Kaibab / Rim (Orange)",color:"#e08a1e",rt:"Visitor Center ↔ Yaki Point / S. Kaibab Trailhead",hrs:"4:30a–1 hr past sunset",st:"Running"},
@@ -874,7 +881,46 @@ $$('.pill[data-tag]').forEach(p=>p.onclick=()=>{ const ta=$('#composer'); ta.val
 
 /* ================= sidebar widgets ================= */
 function renderAlerts(){ $('#parkAlerts').innerHTML=PARK_ALERTS.map(a=>`<div class="pa ${a.lvl}"><div class="paico">${a.ico}</div><div><div class="pat">${esc(a.t)}</div><div class="pad">${esc(a.d)}</div></div></div>`).join(''); }
-function renderSky(){ $('#skyParty').innerHTML=SKY_PARTY.map(s=>`<div class="sky"><span class="when">${esc(s.when)}</span><span class="what">${esc(s.what)}<div class="where">${esc(s.where)}</div></span></div>`).join(''); }
+/* live "tonight's sky": moon computed locally; dark-sky window from sunrise-sunset.org
+   (keyless, CORS); cloud cover from Open-Meteo. Optional real NPS ranger events. */
+const SYNODIC=29.530588853;
+function moonInfo(date){ const ref=Date.UTC(2000,0,6,18,14,0)/86400000; const now=date.getTime()/86400000;
+  const age=((now-ref)%SYNODIC+SYNODIC)%SYNODIC; const illum=(1-Math.cos(2*Math.PI*age/SYNODIC))/2;
+  let phase='New moon';
+  if(age<1.5)phase='New moon'; else if(age<6.6)phase='Waxing crescent'; else if(age<8.9)phase='First quarter';
+  else if(age<13.7)phase='Waxing gibbous'; else if(age<16.6)phase='Full moon'; else if(age<21.4)phase='Waning gibbous';
+  else if(age<23.7)phase='Last quarter'; else if(age<28.5)phase='Waning crescent';
+  return {age,illum,phase}; }
+function moonEmoji(age){ const e=['🌑','🌒','🌓','🌔','🌕','🌖','🌗','🌘']; return e[Math.floor(age/SYNODIC*8+0.5)%8]; }
+async function loadSky(){
+  const m=moonInfo(new Date());
+  $('#skMoon').textContent=`${moonEmoji(m.age)} ${m.phase} · ${Math.round(m.illum*100)}% lit`;
+  const lat=36.0544, lon=-112.1401, tz='America/Phoenix';
+  const fmt=iso=>new Date(iso).toLocaleTimeString('en-US',{timeZone:tz,hour:'numeric',minute:'2-digit'});
+  try{
+    const base=`https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lon}&formatted=0`;
+    const today=await (await fetch(base)).json();
+    const tmrw=await (await fetch(base+'&date=tomorrow')).json();
+    if(today.status==='OK'){
+      $('#skSunset').textContent=fmt(today.results.sunset);
+      $('#skDark').textContent=`${fmt(today.results.astronomical_twilight_end)} → ${fmt(tmrw.results.astronomical_twilight_begin)}`;
+      $('#skDawn').textContent=fmt(tmrw.results.sunrise);
+    }
+  }catch(e){ $('#skDark').textContent='Unavailable'; }
+  try{
+    const j=await (await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=cloud_cover&timezone=America%2FPhoenix&forecast_days=2`)).json();
+    const idx=j.hourly.time.findIndex(t=>t.endsWith('22:00')); const cc=idx>=0?j.hourly.cloud_cover[idx]:null;
+    if(cc!=null){ const label=cc<20?'Clear':cc<50?'Mostly clear':cc<80?'Partly cloudy':'Cloudy';
+      const el=$('#skClouds'); el.textContent=`${label} · ${cc}% cloud`; el.style.color=cc<35?'var(--ok)':cc<70?'var(--warn)':'var(--muted)'; }
+  }catch(e){ $('#skClouds').textContent='—'; }
+  loadNpsEvents();
+}
+async function loadNpsEvents(){ const el=$('#skEvents'); if(!window.NPS_API_KEY){ el.innerHTML=''; return; }
+  try{ const j=await (await fetch(`https://developer.nps.gov/api/v1/events?parkCode=grca&api_key=${encodeURIComponent(window.NPS_API_KEY)}&pageSize=20`)).json();
+    const items=(j.data||[]).filter(e=>/star|astronom|night sky|telescope|constellation|dark sky/i.test((e.title||'')+' '+(e.description||''))).slice(0,4);
+    el.innerHTML=items.length?('<div class="wtitle" style="margin-top:10px">Ranger night-sky programs <span class="small">NPS</span></div>'+items.map(e=>{
+      const when=(e.times&&e.times[0]&&e.times[0].timestart)||e.date||''; return `<div class="sky"><span class="when">${esc(when)}</span><span class="what">${esc(e.title||'Program')}<div class="where">${esc(e.location||'Grand Canyon South Rim')}</div></span></div>`; }).join('')):'';
+  }catch(e){ el.innerHTML=''; } }
 function renderBuses(){ $('#parkBuses').innerHTML=PARK_BUSES.map(b=>`<div class="routebar"><span class="dotc" style="background:${b.color};color:${b.color}"></span>
     <span class="rn">${b.n}</span><span class="rt small">${b.rt}</span><span class="tag">${b.hrs}</span><strong style="color:${b.st==='Running'?'var(--ok)':'var(--warn)'}">${b.st}</strong></div>`).join('');
   $('#empShuttle').innerHTML=EMP_SHUTTLE.map(s=>`<div class="routebar"><span class="dotc" style="background:var(--clay);color:var(--clay)"></span>
@@ -989,10 +1035,11 @@ async function loadAlerts(){ const el=$('#alertsList'); try{
   }catch(e){ el.textContent='Alerts unavailable.'; $('#ax').textContent='—'; } }
 
 /* ================= boot ================= */
-initProfileForm(); renderMe(); renderFeed(); renderAlerts(); renderSky(); renderBuses(); renderRides();
+initProfileForm(); renderMe(); renderFeed(); renderAlerts(); renderBuses(); renderRides();
 renderNewTags(); renderMarket(); renderPhotos(); renderParks(); renderFriends(); renderConvs(); updateDM();
 $$('.reveal').forEach(el=>requestAnimationFrame(()=>el.classList.add('in')));
-loadWeather(); loadAlerts(); setInterval(loadWeather,600000); setInterval(loadAlerts,900000);
+loadWeather(); loadAlerts(); loadSky();
+setInterval(loadWeather,600000); setInterval(loadAlerts,900000); setInterval(loadSky,3600000);
 </script>
 </body>
 </html>
