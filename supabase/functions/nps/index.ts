@@ -5,12 +5,15 @@
 //   GET /functions/v1/nps?type=events   -> live ranger programs (sky party feed)
 // Returns the standard envelope: { success, data, error }.
 //
-// Deploy (dashboard or CLI) and set the secret:
-//   supabase secrets set NPS_API_KEY=xxxxxxxx
-//   supabase functions deploy nps --no-verify-jwt
+// Deploy via the Supabase dashboard editor (Edge Functions -> Via Editor),
+// name it "nps", turn Verify JWT OFF, then set the secret:
+//   Project Settings -> Edge Functions -> Secrets: NPS_API_KEY = <key>
 // Get a free key at https://www.nps.gov/subjects/developer/get-started.htm
+//
+// Note: every line is kept short on purpose — the dashboard editor can hard-wrap
+// long lines on paste and break a string literal.
 
-const PARK = "grca"; // Grand Canyon National Park
+const PARK = "grca";
 const NPS = "https://developer.nps.gov/api/v1";
 
 const cors = {
@@ -19,26 +22,28 @@ const cors = {
   "Access-Control-Allow-Methods": "GET, OPTIONS",
 };
 
-function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...cors, "content-type": "application/json" },
-  });
+function json(body, status = 200) {
+  const h = { ...cors, "content-type": "application/json" };
+  return new Response(JSON.stringify(body), { status, headers: h });
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
-
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: cors });
+  }
   const key = Deno.env.get("NPS_API_KEY");
-  if (!key) return json({ success: false, data: [], error: "NPS_API_KEY not set" }, 500);
-
-  const type = new URL(req.url).searchParams.get("type") || "alerts";
-  const path = type === "events" ? "events" : "alerts";
-  const url = `${NPS}/${path}?parkCode=${PARK}&api_key=${encodeURIComponent(key)}&limit=50`;
-
+  if (!key) {
+    return json({ success: false, data: [], error: "no key" }, 500);
+  }
+  const sp = new URL(req.url).searchParams;
+  const type = sp.get("type") === "events" ? "events" : "alerts";
+  const url = NPS + "/" + type + "?parkCode=" + PARK +
+    "&api_key=" + encodeURIComponent(key) + "&limit=50";
   try {
     const r = await fetch(url, { headers: { accept: "application/json" } });
-    if (!r.ok) return json({ success: false, data: [], error: `NPS ${r.status}` }, 502);
+    if (!r.ok) {
+      return json({ success: false, data: [], error: "nps " + r.status }, 502);
+    }
     const j = await r.json();
     return json({ success: true, data: j?.data ?? [], error: null });
   } catch (e) {
