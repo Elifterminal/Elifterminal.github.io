@@ -280,6 +280,19 @@ body{margin:0; color:var(--fg); overflow-x:hidden; background:var(--bg);
 .bubble.hasimg{padding:5px}
 .msgimg img{display:block; max-width:230px; max-height:250px; border-radius:9px}
 
+/* @mentions + global search */
+.mention{color:var(--river); font-weight:700; cursor:pointer; text-decoration:none}
+.mention:hover{text-decoration:underline}
+.mentionbox{position:fixed; z-index:100; display:none; background:var(--term); border:1px solid var(--border); border-radius:12px; box-shadow:var(--card-shadow); overflow-y:auto; max-height:244px}
+.mitem{display:grid; grid-template-columns:26px 1fr; gap:9px; align-items:center; padding:8px 11px; cursor:pointer}
+.mitem .avi{width:26px; height:26px; font-size:10px; border-radius:8px}
+.mitem.on,.mitem:hover{background:color-mix(in oklab,var(--clay) 14%, transparent)}
+.sgroup{padding:10px 16px 4px; font-size:11px; font-weight:900; letter-spacing:.1em; text-transform:uppercase; color:var(--muted)}
+.sresult{padding:10px 16px; border-top:1px solid var(--border); display:grid; grid-template-columns:auto 1fr; gap:11px; align-items:center; cursor:pointer}
+.sresult:hover{background:color-mix(in oklab,var(--clay) 12%, transparent)}
+.sresult .si{font-size:18px; width:34px; text-align:center}
+.sresult .avi{width:34px; height:34px; font-size:12px; border-radius:10px}
+
 /* palette */
 .palette{position:fixed; inset:0; display:grid; place-items:start center; padding-top:14vh; background:rgba(8,9,13,.5);
   backdrop-filter:blur(8px); z-index:80; opacity:0; pointer-events:none; transition:.15s}
@@ -366,6 +379,7 @@ footer b{color:var(--fg)}
     <button class="tab" data-view="messages">Messages<span class="dm-dot"></span></button>
     <button class="tab" data-view="profile">Profile</button>
   </div>
+  <button id="btnSearch" class="btn sm" title="Search (/)" aria-label="Search">🔎</button>
   <button id="btnBell" class="btn sm bell" title="Notifications" aria-label="Notifications">🔔<span class="nbadge" id="nbadge"></span></button>
   <div class="navbtns">
     <button id="btnTheme" class="btn sm" title="Day/Night (T)">☀︎ / ☾</button>
@@ -673,6 +687,9 @@ footer b{color:var(--fg)}
 <div class="palette" id="palette" aria-hidden="true">
   <div class="panel"><input id="palInput" placeholder="Jump to: home, transit, marketplace, messages, profile · night/day…" aria-label="Command" /><div id="palResults"></div></div>
 </div>
+<div class="palette" id="search" aria-hidden="true">
+  <div class="panel"><input id="searchInput" placeholder="Search people, posts, marketplace, rides…" aria-label="Search" /><div id="searchResults"></div></div>
+</div>
 <div class="lightbox" id="lightbox"><img id="lightboxImg" alt="" /></div>
 
 <script>
@@ -926,10 +943,10 @@ let OPEN_COMMENTS=new Set();
 function postHTML(p){ const pe=person(p.h); if(!p.comments)p.comments=[];
   const media=p.img?`<div class="media zoom" data-src="${p.img}" style="background-image:url('${p.img}')"></div>`
     :(p.media?`<div class="media" style="background:linear-gradient(135deg,${coColor(pe.co)},color-mix(in oklab,${coColor(pe.co)} 35%,#000))"></div>`:'');
-  const cmts=p.comments.map(c=>{ const ce=person(c.h); return `<div class="cmt">${avi(c.h,ce.co,32,9)}<div><span class="ch">@${esc(c.h)}</span> <span class="meta">· ${esc(c.t)}</span><div class="ctext">${esc(c.x)}</div></div></div>`; }).join('');
+  const cmts=p.comments.map(c=>{ const ce=person(c.h); return `<div class="cmt">${avi(c.h,ce.co,32,9)}<div><span class="ch">@${esc(c.h)}</span> <span class="meta">· ${esc(c.t)}</span><div class="ctext">${linkify(c.x)}</div></div></div>`; }).join('');
   return `<div class="post">${avi(p.h,pe.co,46,12)}<div>
     <div class="handle">@${esc(p.h)}<span class="co">${esc(pe.co)} · ${esc(pe.job)}</span> <span class="meta">· ${esc(p.t)}</span></div>
-    <div class="text">${esc(p.x)}</div>${media}
+    <div class="text">${linkify(p.x)}</div>${media}
     ${reactsHTML(p,'post',p.id)}
     <div class="actions"><button class="icon-btn cbtn" data-id="${p.id}">💬 <span>${p.comments.length}</span></button>
       <button class="icon-btn">↗ Share</button>
@@ -952,8 +969,8 @@ function simulateEngagement(postId){
     if(!p.reacts)p.reacts={}; p.reacts['❤️']=(p.reacts['❤️']||0)+1; renderFeed();
     pushNotif({who,ico:'❤️',text:'liked your post',ref:'home'}); },5000);
   setTimeout(()=>{ const p=POSTS.find(x=>x.id===postId); if(!p)return; const who=FRIENDS[1]||FRIENDS[0]||'sky_t';
-    p.comments.push({h:who,x:'love this 🙌',t:'now'}); renderFeed();
-    pushNotif({who,ico:'💬',text:'commented on your post',ref:'home'}); },9000); }
+    p.comments.push({h:who,x:'love this 🙌 @'+ME.handle,t:'now'}); renderFeed();
+    pushNotif({who,ico:'💬',text:'mentioned you in a comment',ref:'home'}); },9000); }
 $('#feedSeg').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b)return; FEED_FILTER=b.dataset.f;
   $$('#feedSeg button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.f===FEED_FILTER)); renderFeed(); });
 let pendingPostImg='';
@@ -1149,6 +1166,55 @@ async function loadAlerts(){ const el=$('#alertsList'); try{
   if(!f.length){ el.innerHTML='<span style="color:var(--ok)">✓ No active alerts.</span>'; $('#ax').textContent='none'; return; }
   el.innerHTML=f.map(a=>`<div class="alert">${esc(a.properties?.event||'Alert')} — <span class="small">${esc(a.properties?.headline||'')}</span></div>`).join(''); $('#ax').textContent=f.length+' active';
   }catch(e){ el.textContent='Alerts unavailable.'; $('#ax').textContent='—'; } }
+
+/* ================= @mentions + global search ================= */
+function linkify(text){ return esc(text).replace(/@(\w{2,30})/g,(_,h)=>`<a class="mention" data-h="${h}">@${h}</a>`); }
+function peopleAll(){ const a={...PEOPLE}; a[ME.handle]={name:ME.name,co:ME.company,job:ME.job,bio:ME.bio}; return a; }
+document.addEventListener('click',e=>{ const mn=e.target.closest('.mention'); if(mn){ const h=mn.dataset.h; if(h===ME.handle) show('profile'); else if(peopleAll()[h]) openDM(h,(peopleAll()[h]||{}).co); } });
+
+const mbox=document.createElement('div'); mbox.className='mentionbox'; document.body.appendChild(mbox);
+let mTarget=null,mStart=0,mItems=[],mIndex=0;
+function mClose(){ mbox.style.display='none'; mTarget=null; }
+function mRender(){ const all=peopleAll(); mbox.innerHTML=mItems.map((h,i)=>`<div class="mitem ${i===mIndex?'on':''}" data-h="${h}">${avi(h,all[h].co,26,8)}<span><b>@${esc(h)}</b> <span class="small">${esc(all[h].name)}</span></span></div>`).join(''); mbox.style.display='block'; }
+function mScan(el){ const pos=el.selectionStart, left=el.value.slice(0,pos), m=left.match(/@(\w*)$/); if(!m){ mClose(); return; }
+  mStart=pos-m[0].length; const q=m[1].toLowerCase(), all=peopleAll();
+  mItems=Object.keys(all).filter(h=>h!==ME.handle&&(h.toLowerCase().includes(q)||(all[h].name||'').toLowerCase().includes(q))).slice(0,6);
+  if(!mItems.length){ mClose(); return; } mTarget=el; mIndex=0; mRender();
+  const r=el.getBoundingClientRect(); mbox.style.left=r.left+'px'; mbox.style.top=(r.bottom+4)+'px'; mbox.style.width=Math.max(220,Math.min(r.width,320))+'px'; }
+function mPick(h){ if(!mTarget)return; const el=mTarget,pos=el.selectionStart,v=el.value;
+  el.value=v.slice(0,mStart)+'@'+h+' '+v.slice(pos); const np=mStart+h.length+2; el.focus(); el.setSelectionRange(np,np); mClose(); }
+document.addEventListener('input',e=>{ if(e.target.matches('#composer,.cadd,#mkTitle')) mScan(e.target); });
+document.addEventListener('keydown',e=>{ if(mbox.style.display!=='block'||!mTarget) return;
+  if(e.key==='ArrowDown'){ e.preventDefault(); mIndex=(mIndex+1)%mItems.length; mRender(); }
+  else if(e.key==='ArrowUp'){ e.preventDefault(); mIndex=(mIndex-1+mItems.length)%mItems.length; mRender(); }
+  else if(e.key==='Enter'){ e.preventDefault(); e.stopPropagation(); mPick(mItems[mIndex]); }
+  else if(e.key==='Escape'){ mClose(); } }, true);
+mbox.addEventListener('mousedown',e=>{ e.preventDefault(); const it=e.target.closest('.mitem'); if(it) mPick(it.dataset.h); });
+document.addEventListener('click',e=>{ if(!e.target.closest('.mentionbox')&&e.target!==mTarget) mClose(); });
+
+const searchEl=$('#search'),searchInput=$('#searchInput'),searchResults=$('#searchResults');
+function openSearch(){ searchEl.classList.add('open'); searchInput.value=''; searchResults.innerHTML='<div class="sgroup">Type to search…</div>'; searchInput.focus(); }
+function closeSearch(){ searchEl.classList.remove('open'); }
+$('#btnSearch').onclick=openSearch; { const fs=$('#fabSearch'); if(fs) fs.onclick=openSearch; }
+addEventListener('keydown',e=>{ if(e.key==='/'&&!/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)){ e.preventDefault(); openSearch(); } if(e.key==='Escape') closeSearch(); });
+searchInput.addEventListener('input',()=>runSearch(searchInput.value.trim().toLowerCase()));
+function runSearch(q){ if(!q){ searchResults.innerHTML='<div class="sgroup">Type to search…</div>'; return; }
+  const all=peopleAll();
+  const ppl=Object.keys(all).filter(h=>(h+' '+(all[h].name||'')+' '+(all[h].co||'')+' '+(all[h].job||'')+' '+(all[h].bio||'')).toLowerCase().includes(q)).slice(0,5);
+  const posts=POSTS.filter(p=>(p.x||'').toLowerCase().includes(q)).slice(0,5);
+  const mkt=MARKET.filter(m=>((m.t||'')+' '+(m.p||'')+' '+(m.tags||[]).join(' ')+' '+(m.type||'')).toLowerCase().includes(q)).slice(0,5);
+  const rides=RIDES.filter(r=>((r.to||'')+' '+(r.seats||'')+' '+(r.when||'')).toLowerCase().includes(q)).slice(0,5);
+  let html='';
+  if(ppl.length) html+='<div class="sgroup">People</div>'+ppl.map(h=>`<div class="sresult" data-act="person" data-h="${h}">${avi(h,all[h].co,34,10)}<div><b>@${esc(h)}</b> <span class="small">${esc(all[h].name||'')} · ${esc(all[h].co||'')}</span></div></div>`).join('');
+  if(posts.length) html+='<div class="sgroup">Posts</div>'+posts.map(p=>`<div class="sresult" data-act="post"><span class="si">📝</span><div><b>@${esc(p.h)}</b> <span class="small">${esc((p.x||'').slice(0,72))}</span></div></div>`).join('');
+  if(mkt.length) html+='<div class="sgroup">Marketplace</div>'+mkt.map(m=>`<div class="sresult" data-act="market" data-q="${esc(m.t)}"><span class="si">🪧</span><div><b>${esc(m.t)}</b> <span class="small">${esc(m.p)} · ${esc(m.type)}</span></div></div>`).join('');
+  if(rides.length) html+='<div class="sgroup">Rides</div>'+rides.map(r=>`<div class="sresult" data-act="transit"><span class="si">🚗</span><div><b>${esc(r.to)}</b> <span class="small">${esc(r.when)} · @${esc(r.by)}</span></div></div>`).join('');
+  searchResults.innerHTML=html||'<div class="sgroup">No matches</div>'; }
+searchResults.addEventListener('click',e=>{ const r=e.target.closest('.sresult'); if(!r)return; const act=r.dataset.act; closeSearch();
+  if(act==='person'){ const h=r.dataset.h; if(h===ME.handle) show('profile'); else openDM(h,(peopleAll()[h]||{}).co); }
+  else if(act==='post'){ FEED_FILTER='all'; $$('#feedSeg button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.f==='all')); renderFeed(); show('home'); }
+  else if(act==='market'){ MK_TYPE='All'; MK_TAGS.clear(); MK_Q=(r.dataset.q||'').toLowerCase(); const ms=$('#mkSearch'); if(ms)ms.value=r.dataset.q||''; renderMarket(); show('marketplace'); }
+  else if(act==='transit'){ show('transit'); } });
 
 /* ================= boot ================= */
 initProfileForm(); renderMe(); renderFeed(); renderAlerts(); renderBuses(); renderRides();
