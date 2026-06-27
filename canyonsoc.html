@@ -838,7 +838,9 @@ function avi(h,co,size,radius){ const c=coColor(co||person(h).co); const p=safeP
 
 /* ================= state ================= */
 let ME=LS.get('canyonsoc_profile',{name:"You",handle:"you",job:"New here",company:"Self-employed / Other",house:"—",status:"New here",bio:"",pic:""});
-let FRIENDS=LS.get('canyonsoc_friends',[]);
+let FRIENDS=[];           // accepted friends (handles) — filled by loadFriends from the backend
+let FRIEND_IN=[];         // incoming pending requests (handles who asked me)
+let FRIEND_OUT=[];        // outgoing pending requests (handles I asked)
 let PHOTOS=LS.get('canyonsoc_photos',[]);
 let PARKS=LS.get('canyonsoc_parks',[]);
 let RIDES=LS.get('canyonsoc_rides',[]);
@@ -998,20 +1000,63 @@ $('#pkAdd').onclick=()=>{ const park=$('#pkPark').value.trim(); if(!park){ $('#p
   renderParks(); renderMe(); };
 $('#parkExp').addEventListener('click',e=>{ const b=e.target.closest('.pkdel'); if(!b)return; PARKS.splice(+b.dataset.i,1); LS.set('canyonsoc_parks',PARKS); renderParks(); renderMe(); });
 
-/* friends */
+/* friends — backed by the friendships table (RLS: you only see rows you're part of).
+   A directed row is pending until the addressee accepts; accepted = mutual. */
+let ID_BY_HANDLE=Object.create(null);
+async function loadFriends(){
+  FRIENDS=[]; FRIEND_IN=[]; FRIEND_OUT=[];
+  if(sb && AUTH_USER){
+    const myid=AUTH_USER.id;
+    const { data,error }=await sb.from('friendships')
+      .select('requester_id,addressee_id,status')
+      .or(`requester_id.eq.${myid},addressee_id.eq.${myid}`);
+    if(error){ console.warn('friends load:',error); }
+    else (data||[]).forEach(f=>{
+      const otherId=f.requester_id===myid?f.addressee_id:f.requester_id;
+      const op=PROF_BY_ID[otherId]; if(!op||!op.handle)return; const h=op.handle;
+      if(f.status==='accepted') FRIENDS.push(h);
+      else if(f.status==='pending'){ (f.addressee_id===myid?FRIEND_IN:FRIEND_OUT).push(h); }
+    });
+  }
+  renderFriends(); renderMe();
+}
+function frow(h,btns){ const p=person(h); return `<div class="frow">${avi(h,p.co,46,12)}
+  <div style="min-width:0"><div style="font-weight:800">${esc(p.name)} <span class="small">@${esc(h)}</span></div><div class="small">${esc(p.co)}${p.job?' · '+esc(p.job):''}</div></div>
+  <div style="display:flex; gap:6px">${btns}</div></div>`; }
 function renderFriends(){
   $('#friendCount').textContent=FRIENDS.length;
-  $('#friendList').innerHTML=FRIENDS.map(h=>{ const p=person(h); return `<div class="frow">${avi(h,p.co,46,12)}
-    <div style="min-width:0"><div style="font-weight:800">${esc(p.name)} <span class="small">@${esc(h)}</span></div><div class="small">${esc(p.co)} · ${esc(p.job)}</div></div>
-    <div style="display:flex; gap:6px"><button class="btn sm act-msg" data-h="${esc(h)}" data-co="${esc(p.co)}">✉</button><button class="btn ghost sm unfriend" data-h="${esc(h)}">Remove</button></div></div>`; }).join('')||'<div class="small">No friends yet — add a few below.</div>';
-  const sugg=Object.keys(PEOPLE).filter(h=>!FRIENDS.includes(h)&&h!==ME.handle);
-  $('#suggestions').innerHTML=sugg.map(h=>{ const p=PEOPLE[h]; return `<div class="frow">${avi(h,p.co,46,12)}
-    <div style="min-width:0"><div style="font-weight:800">${esc(p.name)} <span class="small">@${esc(h)}</span></div><div class="small">${esc(p.bio)}</div></div>
-    <button class="btn primary sm addfriend" data-h="${esc(h)}">+ Add</button></div>`; }).join('')||'<div class="small">That is everyone around for now. 🙂</div>';
+  $('#friendList').innerHTML=FRIENDS.map(h=>frow(h,
+    `<button class="btn sm act-msg" data-h="${esc(h)}" data-co="${esc(person(h).co)}">✉</button><button class="btn ghost sm unfriend" data-h="${esc(h)}">Remove</button>`
+  )).join('')||'<div class="small">No friends yet — accept a request or add someone below.</div>';
+  let html='';
+  if(FRIEND_IN.length){ html+=`<div class="wtitle" style="margin-top:2px">Requests (${FRIEND_IN.length})</div>`;
+    html+=FRIEND_IN.map(h=>frow(h,
+      `<button class="btn primary sm acceptfriend" data-h="${esc(h)}">Accept</button><button class="btn ghost sm declinefriend" data-h="${esc(h)}">Decline</button>`
+    )).join(''); }
+  const sugg=Object.keys(PEOPLE).filter(h=>!FRIENDS.includes(h)&&!FRIEND_IN.includes(h)&&h!==ME.handle);
+  html+='<div class="wtitle" style="margin-top:8px">Suggestions</div>';
+  html+=sugg.map(h=>frow(h, FRIEND_OUT.includes(h)
+    ? `<button class="btn ghost sm" disabled>Requested</button>`
+    : `<button class="btn primary sm addfriend" data-h="${esc(h)}">+ Add</button>`
+  )).join('')||'<div class="small">That is everyone around for now. 🙂</div>';
+  $('#suggestions').innerHTML=html;
 }
-document.addEventListener('click',e=>{
-  const a=e.target.closest('.addfriend'); if(a){ if(!FRIENDS.includes(a.dataset.h))FRIENDS.push(a.dataset.h); LS.set('canyonsoc_friends',FRIENDS); renderFriends(); renderMe(); }
-  const u=e.target.closest('.unfriend'); if(u){ FRIENDS=FRIENDS.filter(x=>x!==u.dataset.h); LS.set('canyonsoc_friends',FRIENDS); renderFriends(); renderMe(); if(FEED_FILTER==='friends')renderFeed(); }
+document.addEventListener('click',async e=>{
+  const a=e.target.closest('.addfriend'), u=e.target.closest('.unfriend'),
+        ac=e.target.closest('.acceptfriend'), dc=e.target.closest('.declinefriend');
+  const btn=a||u||ac||dc; if(!btn) return;
+  if(!sb||!AUTH_USER){ alert('Sign in to manage friends.'); return; }
+  const myid=AUTH_USER.id, target=btn.dataset.h, tid=ID_BY_HANDLE[target];
+  if(!tid) return;
+  btn.disabled=true;
+  try{
+    if(a) await sb.from('friendships').insert({requester_id:myid,addressee_id:tid,status:'pending'});
+    else if(ac) await sb.from('friendships').update({status:'accepted'}).eq('requester_id',tid).eq('addressee_id',myid);
+    else if(dc) await sb.from('friendships').delete().eq('requester_id',tid).eq('addressee_id',myid);
+    else if(u) await sb.from('friendships').delete()
+      .or(`and(requester_id.eq.${myid},addressee_id.eq.${tid}),and(requester_id.eq.${tid},addressee_id.eq.${myid})`);
+  }catch(err){ console.warn('friend action:',err); }
+  await loadFriends(); if(FEED_FILTER==='friends')renderFeed();
 });
 
 /* ================= feed ================= */
@@ -1382,11 +1427,12 @@ let PROF_BY_ID=Object.create(null);
 async function loadDirectory(){ if(!sb) return;
   const { data,error }=await sb.from('profiles').select('user_id,handle,name,company,job,bio,pic_url');
   if(error){ console.warn('directory load:',error); return; }
-  const next=Object.create(null), byId=Object.create(null); const RESV=['__proto__','constructor','prototype'];
+  const next=Object.create(null), byId=Object.create(null), idByH=Object.create(null); const RESV=['__proto__','constructor','prototype'];
   (data||[]).forEach(p=>{ const prof={name:p.name||('@'+p.handle),co:p.company||'',job:p.job||'',bio:p.bio||'',pic:safePic(p.pic_url),handle:p.handle};
     if(p.user_id) byId[p.user_id]=prof;
+    if(p.handle&&!RESV.includes(p.handle)) idByH[p.handle]=p.user_id;
     if(p.handle&&p.handle!==ME.handle&&!RESV.includes(p.handle)) next[p.handle]=prof; });
-  PEOPLE=next; PROF_BY_ID=byId; renderFriends(); renderConvs(); loadFeed(); }
+  PEOPLE=next; PROF_BY_ID=byId; ID_BY_HANDLE=idByH; loadFriends(); renderConvs(); loadFeed(); }
 async function loadProfileFromCloud(){ if(!sb||!AUTH_USER)return;
   const { data,error }=await sb.from('profiles').select('*').eq('user_id',AUTH_USER.id).maybeSingle();
   if(error){ console.warn('profile load:',error); return; }
