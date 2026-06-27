@@ -1244,6 +1244,7 @@ async function loadFeed(){ if(!sb) return;
   if(ids.length){ comments=(await sb.from('comments').select('id,post_id,author_id,body,created_at').in('post_id',ids).order('created_at')).data||[];
     reacts=(await sb.from('reactions').select('target_id,user_id,emoji').eq('target_type','post').in('target_id',ids)).data||[]; }
   const myid=AUTH_USER?AUTH_USER.id:null;
+  await ensureProfiles((posts||[]).map(p=>p.author_id).concat(comments.map(c=>c.author_id)));
   const who=id=>(myid&&id===myid)?ME.handle:((PROF_BY_ID[id]&&PROF_BY_ID[id].handle)||'user');
   const cBy={}; comments.forEach(c=>{ (cBy[c.post_id]=cBy[c.post_id]||[]).push({h:who(c.author_id),x:c.body||'',t:rel(c.created_at)}); });
   const rBy={}; reacts.forEach(r=>{ const m=rBy[r.target_id]=rBy[r.target_id]||{reacts:{},mine:[]}; m.reacts[r.emoji]=(m.reacts[r.emoji]||0)+1; if(r.user_id===myid)m.mine.push(r.emoji); });
@@ -1330,6 +1331,7 @@ async function loadRides(){ if(!sb){ renderRides(); return; }
   const { data,error }=await sb.from('rides').select('id,user_id,destination,when_text,seats_note,created_at').order('created_at',{ascending:false});
   if(error){ console.warn('rides load:',error); return; }
   const myid=AUTH_USER&&AUTH_USER.id;
+  await ensureProfiles((data||[]).map(r=>r.user_id));
   RIDES=(data||[]).map(r=>{ const op=PROF_BY_ID[r.user_id]||{}; const mine=r.user_id===myid;
     return {id:r.id, to:r.destination, when:r.when_text, seats:r.seats_note||'open',
       by:mine?ME.handle:(op.handle||'user'), co:mine?ME.company:(op.co||''), mine}; });
@@ -1369,6 +1371,7 @@ async function loadMarket(){ if(!sb){ renderMarket(); return; }
   const { data,error }=await sb.from('listings').select('id,user_id,title,price,type,tags,created_at').order('created_at',{ascending:false});
   if(error){ console.warn('market load:',error); return; }
   const myid=AUTH_USER&&AUTH_USER.id;
+  await ensureProfiles((data||[]).map(m=>m.user_id));
   MARKET=(data||[]).map(m=>{ const op=PROF_BY_ID[m.user_id]||{}; const owner=m.user_id===myid; const rk=MREACTS[m.id]||{};
     return {id:m.id, t:m.title, p:m.price||'—', type:m.type, tags:m.tags||[],
       by:owner?ME.handle:(op.handle||'user'), co:owner?ME.company:(op.co||''), owner,
@@ -1392,6 +1395,17 @@ function threadUnread(t){ const last=t.msgs[t.msgs.length-1]; if(!last||last.me)
 const unreadCount=()=>THREADS.filter(threadUnread).length;
 function updateDM(){ const on=unreadCount()>0; $$('[data-view="messages"]').forEach(t=>t.classList.toggle('has-unread',on)); }
 
+/* fetch any profiles we don't have cached yet (e.g. people who joined after our
+   directory snapshot loaded) and merge them into the lookups — fixes "@user". */
+async function ensureProfiles(ids){
+  const miss=[...new Set((ids||[]).filter(id=>id && !PROF_BY_ID[id]))];
+  if(!miss.length||!sb) return;
+  const { data }=await sb.from('profiles').select('user_id,handle,name,company,job,bio,pic_url,cover_url,status').in('user_id',miss);
+  (data||[]).forEach(p=>{ const prof={name:p.name||('@'+p.handle),co:p.company||'',job:p.job||'',bio:p.bio||'',pic:safePic(p.pic_url),cover:safePic(p.cover_url),status:p.status||'',handle:p.handle};
+    if(p.user_id) PROF_BY_ID[p.user_id]=prof;
+    if(p.handle){ ID_BY_HANDLE[p.handle]=p.user_id; if(p.handle!==ME.handle) PEOPLE[p.handle]=prof; } });
+}
+
 async function loadThreads(){
   if(!sb||!AUTH_USER){ THREADS=[]; DM_BY_ID=Object.create(null); renderConvs(); return; }
   const myid=AUTH_USER.id;
@@ -1406,15 +1420,17 @@ async function loadThreads(){
   (parts||[]).forEach(p=>{ if(p.user_id!==myid && byThread[p.thread_id]) byThread[p.thread_id].oid=p.user_id; });
   (msgs||[]).forEach(m=>{ const t=byThread[m.thread_id]; if(!t)return;
     t.msgs.push({id:m.id, me:m.sender_id===myid, t:m.body||'', img:safePic(m.image_url), at:fmtTime(m.created_at), created_at:m.created_at}); });
-  const list=Object.values(byThread).map(t=>{ const op=PROF_BY_ID[t.oid]||{}; return {...t, h:op.handle||'user', co:op.co||''}; });
+  await ensureProfiles(Object.values(byThread).map(t=>t.oid));
+  const list=Object.values(byThread).map(t=>{ const op=PROF_BY_ID[t.oid]||{};
+    return {...t, h:op.handle||'user', name:op.name||op.handle||'Member', co:op.co||''}; });
   list.sort((a,b)=>{ const la=a.msgs[a.msgs.length-1], lb=b.msgs[b.msgs.length-1];
     return new Date(lb?lb.created_at:0)-new Date(la?la.created_at:0); });
   THREADS=list; DM_BY_ID=Object.create(null); list.forEach(t=>DM_BY_ID[t.id]=t);
   renderConvs(); if(ACTIVE&&DM_BY_ID[ACTIVE]) renderThread(DM_BY_ID[ACTIVE]);
 }
 function renderConvs(){ $('#convlist').innerHTML=THREADS.map(t=>{ const last=t.msgs[t.msgs.length-1];
-  return `<div class="conv" data-tid="${t.id}" aria-selected="${ACTIVE===t.id}">${avi(t.h,t.co,42,11)}
-    <div style="min-width:0"><div class="cn">@${esc(t.h)}</div><div class="cp">${last?esc(last.t||'📷 Photo'):'No messages yet'}</div></div>
+  return `<div class="conv" data-tid="${t.id}" aria-selected="${ACTIVE===t.id}">${aviProf(t.h,t.co,42,11)}
+    <div style="min-width:0"><div class="cn">${esc(t.name)} <span class="small" style="font-weight:600">@${esc(t.h)}</span></div><div class="cp">${last?esc(last.t||'📷 Photo'):'No messages yet'}</div></div>
     ${threadUnread(t)?'<span class="un"></span>':'<span></span>'}</div>`; }).join('')||'<div class="empty">No conversations yet.</div>'; updateDM(); }
 async function openDM(h,co){
   closeProfile();
@@ -1426,8 +1442,9 @@ async function openDM(h,co){
   await loadThreads(); selectConv(tid);
 }
 function renderThread(th){
-  $('#thAvi').outerHTML=avi(th.h,th.co,38,11).replace('class="avi"','class="avi" id="thAvi"');
-  $('#thName').textContent='@'+th.h; $('#thSub').textContent=th.co||'CanyonSoc';
+  $('#thAvi').outerHTML=avi(th.h,th.co,38,11).replace('class="avi"',`class="avi tapprof" data-prof="${esc(th.h)}" id="thAvi"`);
+  const nm=$('#thName'); nm.textContent=th.name; nm.classList.add('tapprof'); nm.dataset.prof=th.h;
+  $('#thSub').textContent='@'+th.h+(th.co?' · '+th.co:'');
   $('#tbody').innerHTML=th.msgs.map(m=>{ const mim=safePic(m.img); const body=mim?`<div class="msgimg" data-src="${esc(mim)}"><img src="${esc(mim)}" alt="" loading="lazy"></div>`:esc(m.t);
     return `<div class="bubble ${m.me?'me':'them'}${m.img?' hasimg':''}">${body}<span class="bt">${esc(m.at||'')}</span></div>`; }).join('')||'<div class="small" style="margin:auto">Say hi 👋</div>';
   $('#tbody').scrollTop=$('#tbody').scrollHeight;
@@ -1461,7 +1478,7 @@ function setupDMRealtime(){ if(!sb||!AUTH_USER||dmChannel) return;
       THREADS=THREADS.filter(x=>x.id!==th.id); THREADS.unshift(th);   // bump to top
       if(ACTIVE===th.id){ SEEN[th.id]=new Date().toISOString(); LS.set('canyonsoc_seen',SEEN); renderThread(th); }
       renderConvs();
-      if(!mine && ACTIVE!==th.id) toast('💬 New message from @'+th.h);
+      if(!mine && ACTIVE!==th.id) toast('💬 New message from '+(th.name||('@'+th.h)));
     })
     .on('postgres_changes',{event:'INSERT',schema:'public',table:'notifications',filter:'user_id=eq.'+AUTH_USER.id}, payload=>{
       const n=mapNotif(payload.new); if(NOTIFS.some(x=>String(x.id)===String(n.id))) return;
