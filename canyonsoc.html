@@ -907,13 +907,18 @@ function reactsHTML(o,kind,id){ if(!o.reacts)o.reacts={}; if(!o.mine)o.mine=[];
   return `<div class="reacts" data-kind="${kind}" data-id="${id}">${summary}<button class="rx add" data-e="__pick">😊 React</button>
     <span class="rxpick">${REACTS.map(e=>`<button class="rxopt" data-e="${e}">${e}</button>`).join('')}</span></div>`; }
 function findReactObj(kind,id){ if(kind==='post') return POSTS.find(p=>p.id===id); if(kind==='photo') return PHOTOS.find(p=>p.id===id); if(kind==='market') return MARKET[+id]; return null; }
-function applyReact(kind,id,e){ const o=findReactObj(kind,id); if(!o)return; if(!o.reacts)o.reacts={}; if(!o.mine)o.mine=[];
+async function applyReact(kind,id,e){
+  if(kind==='post'){ if(!sb||!AUTH_USER){ toast('Sign in to react'); return; }
+    const o=POSTS.find(p=>String(p.id)===String(id)); const has=o&&o.mine.includes(e);
+    if(has) await sb.from('reactions').delete().eq('target_type','post').eq('target_id',Number(id)).eq('user_id',AUTH_USER.id).eq('emoji',e);
+    else await sb.from('reactions').insert({target_type:'post',target_id:Number(id),user_id:AUTH_USER.id,emoji:e});
+    await loadFeed(); return; }
+  const o=findReactObj(kind,id); if(!o)return; if(!o.reacts)o.reacts={}; if(!o.mine)o.mine=[];
   const has=o.mine.includes(e);
   if(has){ o.mine=o.mine.filter(x=>x!==e); o.reacts[e]=Math.max(0,(o.reacts[e]||1)-1); if(!o.reacts[e])delete o.reacts[e]; }
   else{ o.mine.push(e); o.reacts[e]=(o.reacts[e]||0)+1; }
-  if(kind==='photo') LS.set('canyonsoc_photos',PHOTOS);
-  if(kind==='market') LS.set('canyonsoc_market',MARKET);
-  if(kind==='post') renderFeed(); else if(kind==='photo') renderPhotos(); else if(kind==='market') renderMarket(); }
+  if(kind==='photo'){ LS.set('canyonsoc_photos',PHOTOS); renderPhotos(); }
+  else if(kind==='market'){ LS.set('canyonsoc_market',MARKET); renderMarket(); } }
 document.addEventListener('click',e=>{
   const add=e.target.closest('.rx.add'), opt=e.target.closest('.rxopt'), tally=e.target.closest('.rx:not(.add)');
   if(!e.target.closest('.rxpick')&&!add) $$('.reacts.pick-open').forEach(b=>b.classList.remove('pick-open'));
@@ -1022,19 +1027,23 @@ function postHTML(p){ const pe=person(p.h); if(!p.comments)p.comments=[];
     <div class="actions"><button class="icon-btn cbtn" data-id="${p.id}">💬 <span>${p.comments.length}</span></button>
       <button class="icon-btn">↗ Share</button>
       ${p.h!==ME.handle?`<button class="icon-btn act-msg" data-h="${esc(p.h)}" data-co="${esc(pe.co)}">✉ Message</button>`:''}</div>
-    <div class="comments ${OPEN_COMMENTS.has(p.id)?'open':''}">${cmts}
+    <div class="comments ${OPEN_COMMENTS.has(String(p.id))?'open':''}">${cmts}
       <form class="caddrow" data-id="${p.id}"><input class="cadd" placeholder="Write a comment…" autocomplete="off" /><button class="btn sm primary" type="submit">Reply</button></form>
     </div>
   </div></div>`; }
 function renderFeed(){ let list=POSTS; if(FEED_FILTER==='friends') list=POSTS.filter(p=>FRIENDS.includes(p.h)||p.h===ME.handle);
-  $('#feed').innerHTML=list.map(postHTML).join('')||'<div class="post"><div></div><div class="small">No posts from friends yet. Add friends on your profile, or switch to All.</div></div>'; }
+  const empty=FEED_FILTER==='friends'?'No posts from friends yet. Add friends on your profile, or switch to All.':'No posts yet — be the first to share something with the canyon.';
+  $('#feed').innerHTML=list.map(postHTML).join('')||`<div class="post"><div></div><div class="small">${empty}</div></div>`; }
 $('#feed').addEventListener('click',e=>{ const c=e.target.closest('.cbtn'); if(!c)return; const id=c.dataset.id;
   OPEN_COMMENTS.has(id)?OPEN_COMMENTS.delete(id):OPEN_COMMENTS.add(id); renderFeed();
   if(OPEN_COMMENTS.has(id)){ const inp=$('#feed .comments.open .cadd'); if(inp) inp.focus(); } });
-$('#feed').addEventListener('submit',e=>{ const f=e.target.closest('.caddrow'); if(!f)return; e.preventDefault();
+$('#feed').addEventListener('submit',async e=>{ const f=e.target.closest('.caddrow'); if(!f)return; e.preventDefault();
   const id=f.dataset.id, inp=f.querySelector('.cadd'), x=inp.value.trim(); if(!x)return;
-  const p=POSTS.find(pp=>pp.id===id); if(!p)return; p.comments.push({h:ME.handle,x,t:'now'}); OPEN_COMMENTS.add(id);
-  renderFeed(); renderMe(); toast('💬 Comment posted'); });
+  if(!sb||!AUTH_USER){ toast('Sign in to comment'); $('#authModal').classList.add('open'); return; }
+  OPEN_COMMENTS.add(String(id));
+  const { error }=await sb.from('comments').insert({post_id:Number(id), author_id:AUTH_USER.id, body:x});
+  if(error){ toast('⚠️ '+error.message); return; }
+  inp.value=''; await loadFeed(); toast('💬 Comment posted'); });
 $('#feedSeg').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b)return; FEED_FILTER=b.dataset.f;
   $$('#feedSeg button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.f===FEED_FILTER)); renderFeed(); });
 let pendingPostImg='';
@@ -1043,9 +1052,41 @@ $('#pillPhoto').onclick=()=>$('#postImgInput').click();
 $('#postImgInput').addEventListener('change',e=>{ readImage(e.target.files[0],900,d=>{ pendingPostImg=d;
   $('#postImgPreview').hidden=false; $('#postImgPreview').innerHTML=`<img src="${esc(safePic(d))}" alt=""><button type="button" id="postImgX" title="Remove">✕</button>`; }); e.target.value=''; });
 document.addEventListener('click',e=>{ if(e.target.closest('#postImgX')) clearPostImg(); });
-$('#postBtn').onclick=()=>{ const ta=$('#composer'),t=ta.value.trim(); if(!t&&!pendingPostImg)return; const id=nid();
-  POSTS.unshift({id,h:ME.handle,t:'now',x:t,img:pendingPostImg||'',media:0,reacts:{},mine:[],comments:[]}); ta.value=''; clearPostImg(); renderFeed(); renderMe(); };
+$('#postBtn').onclick=async()=>{ const ta=$('#composer'),t=ta.value.trim(); if(!t&&!pendingPostImg)return;
+  if(!sb||!AUTH_USER){ toast('Sign in to post'); $('#authModal').classList.add('open'); return; }
+  const btn=$('#postBtn'); btn.disabled=true; btn.textContent='Posting…';
+  let imgUrl=null; if(pendingPostImg){ imgUrl=await uploadDataUrl(pendingPostImg,'post'); }
+  const { error }=await sb.from('posts').insert({author_id:AUTH_USER.id, body:t||null, image_url:imgUrl});
+  btn.disabled=false; btn.textContent='Post';
+  if(error){ toast('⚠️ '+error.message); return; }
+  ta.value=''; clearPostImg(); await loadFeed(); toast('Posted ✓'); };
 $$('.pill[data-tag]').forEach(p=>p.onclick=()=>{ const ta=$('#composer'); ta.value=(ta.value+' '+p.dataset.tag).trim()+' '; ta.focus(); });
+
+/* ===== Phase 2: shared feed (Supabase) ===== */
+function rel(iso){ const d=new Date(iso), s=(Date.now()-d.getTime())/1000;
+  if(s<60)return'now'; if(s<3600)return Math.floor(s/60)+'m'; if(s<86400)return Math.floor(s/3600)+'h';
+  if(s<604800)return Math.floor(s/86400)+'d'; return d.toLocaleDateString(); }
+async function uploadDataUrl(dataUrl, kind){ try{ if(!sb||!AUTH_USER) return null;
+  const blob=await (await fetch(dataUrl)).blob();
+  const ext=((blob.type.split('/')[1])||'jpg').replace('jpeg','jpg');
+  const path=`${AUTH_USER.id}/${kind}-${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
+  const { error }=await sb.storage.from('media').upload(path, blob, {contentType:blob.type});
+  if(error){ toast('⚠️ image: '+error.message); return null; }
+  return sb.storage.from('media').getPublicUrl(path).data.publicUrl;
+}catch(e){ return null; } }
+async function loadFeed(){ if(!sb) return;
+  const { data:posts,error }=await sb.from('posts').select('id,author_id,body,image_url,created_at').order('created_at',{ascending:false}).limit(100);
+  if(error){ console.warn('feed:',error); return; }
+  const ids=(posts||[]).map(p=>p.id); let comments=[], reacts=[];
+  if(ids.length){ comments=(await sb.from('comments').select('id,post_id,author_id,body,created_at').in('post_id',ids).order('created_at')).data||[];
+    reacts=(await sb.from('reactions').select('target_id,user_id,emoji').eq('target_type','post').in('target_id',ids)).data||[]; }
+  const myid=AUTH_USER?AUTH_USER.id:null;
+  const who=id=>(myid&&id===myid)?ME.handle:((PROF_BY_ID[id]&&PROF_BY_ID[id].handle)||'user');
+  const cBy={}; comments.forEach(c=>{ (cBy[c.post_id]=cBy[c.post_id]||[]).push({h:who(c.author_id),x:c.body||'',t:rel(c.created_at)}); });
+  const rBy={}; reacts.forEach(r=>{ const m=rBy[r.target_id]=rBy[r.target_id]||{reacts:{},mine:[]}; m.reacts[r.emoji]=(m.reacts[r.emoji]||0)+1; if(r.user_id===myid)m.mine.push(r.emoji); });
+  POSTS=(posts||[]).map(p=>{ const rr=rBy[p.id]||{reacts:{},mine:[]};
+    return { id:p.id, h:who(p.author_id), x:p.body||'', img:p.image_url||'', media:0, t:rel(p.created_at), reacts:rr.reacts, mine:rr.mine, comments:cBy[p.id]||[] }; });
+  renderFeed(); renderMe(); }
 
 /* ================= sidebar widgets ================= */
 function renderAlerts(){ const el=$('#parkAlerts');
@@ -1331,12 +1372,15 @@ function handleAuth(session,evt){ AUTH_USER=session?session.user:null; updateAut
   loadDirectory(); }
 /* Real people directory: every profile in Supabase becomes a searchable/mentionable
    user. Read-only, public per RLS. Excludes me (ME is merged in by peopleAll). */
+let PROF_BY_ID=Object.create(null);
 async function loadDirectory(){ if(!sb) return;
-  const { data,error }=await sb.from('profiles').select('handle,name,company,job,bio,pic_url');
+  const { data,error }=await sb.from('profiles').select('user_id,handle,name,company,job,bio,pic_url');
   if(error){ console.warn('directory load:',error); return; }
-  const next=Object.create(null); const RESV=['__proto__','constructor','prototype'];
-  (data||[]).forEach(p=>{ if(p.handle&&p.handle!==ME.handle&&!RESV.includes(p.handle)) next[p.handle]={name:p.name||('@'+p.handle),co:p.company||'',job:p.job||'',bio:p.bio||'',pic:safePic(p.pic_url)}; });
-  PEOPLE=next; renderFriends(); renderConvs(); }
+  const next=Object.create(null), byId=Object.create(null); const RESV=['__proto__','constructor','prototype'];
+  (data||[]).forEach(p=>{ const prof={name:p.name||('@'+p.handle),co:p.company||'',job:p.job||'',bio:p.bio||'',pic:safePic(p.pic_url),handle:p.handle};
+    if(p.user_id) byId[p.user_id]=prof;
+    if(p.handle&&p.handle!==ME.handle&&!RESV.includes(p.handle)) next[p.handle]=prof; });
+  PEOPLE=next; PROF_BY_ID=byId; renderFriends(); renderConvs(); loadFeed(); }
 async function loadProfileFromCloud(){ if(!sb||!AUTH_USER)return;
   const { data,error }=await sb.from('profiles').select('*').eq('user_id',AUTH_USER.id).maybeSingle();
   if(error){ console.warn('profile load:',error); return; }
