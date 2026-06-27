@@ -143,6 +143,7 @@ body{margin:0; color:var(--fg); overflow-x:hidden; background:var(--bg);
 .composer textarea,.field textarea{width:100%; min-height:78px; resize:vertical; border:1px solid var(--border); color:var(--fg);
   background:color-mix(in oklab,var(--bg) 50%, transparent); padding:11px 13px; border-radius:12px; outline:none; font:inherit}
 .composer textarea:focus{border-color:color-mix(in oklab,var(--clay) 55%, var(--border))}
+#composer{min-height:46px; max-height:40vh; line-height:1.45; overflow-y:auto}
 .composer .row{display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap}
 .pill{display:inline-flex; align-items:center; gap:6px; padding:6px 11px; border:1px solid var(--border); border-radius:999px;
   background:color-mix(in oklab,var(--clay) 9%, transparent); font-size:12.5px; cursor:pointer; transition:.12s}
@@ -1059,8 +1060,13 @@ $('#postBtn').onclick=async()=>{ const ta=$('#composer'),t=ta.value.trim(); if(!
   const { error }=await sb.from('posts').insert({author_id:AUTH_USER.id, body:t||null, image_url:imgUrl});
   btn.disabled=false; btn.textContent='Post';
   if(error){ toast('⚠️ '+error.message); return; }
-  ta.value=''; clearPostImg(); await loadFeed(); toast('Posted ✓'); };
-$$('.pill[data-tag]').forEach(p=>p.onclick=()=>{ const ta=$('#composer'); ta.value=(ta.value+' '+p.dataset.tag).trim()+' '; ta.focus(); });
+  ta.value=''; clearPostImg(); ta.style.height=''; await loadFeed(); toast('Posted ✓'); };
+/* composer auto-grows to fit while typing (capped), manual drag-resize still works,
+   and snaps back to compact after posting (height reset above) */
+function growComposer(){ const ta=$('#composer'); if(!ta)return; ta.style.height='auto';
+  ta.style.height=Math.min(ta.scrollHeight, Math.round(innerHeight*0.4))+'px'; }
+{ const ta=$('#composer'); if(ta) ta.addEventListener('input',growComposer); }
+$$('.pill[data-tag]').forEach(p=>p.onclick=()=>{ const ta=$('#composer'); ta.value=(ta.value+' '+p.dataset.tag).trim()+' '; ta.focus(); growComposer(); });
 
 /* ===== Phase 2: shared feed (Supabase) ===== */
 function rel(iso){ const d=new Date(iso), s=(Date.now()-d.getTime())/1000;
