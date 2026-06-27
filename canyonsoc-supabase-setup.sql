@@ -150,7 +150,17 @@ create policy "rides_write" on rides for all using (auth.uid() = user_id) with c
 alter table threads enable row level security;
 alter table thread_participants enable row level security;
 alter table messages enable row level security;
-create policy "tp_read"  on thread_participants for select using (auth.uid() = user_id);
+-- A member must be able to read EVERY seat of a thread they're in (not just their
+-- own) so the client can tell who a DM is with — otherwise the other participant
+-- is invisible and the UI falls back to "Member / @user". SECURITY DEFINER avoids
+-- RLS self-recursion (a policy on thread_participants can't query the same table directly).
+create or replace function is_thread_member(tid bigint) returns boolean
+  language sql stable security definer set search_path = public as $$
+  select exists(select 1 from thread_participants where thread_id = tid and user_id = auth.uid());
+$$;
+revoke execute on function is_thread_member(bigint) from anon;
+grant execute on function is_thread_member(bigint) to authenticated;
+create policy "tp_read"  on thread_participants for select using (is_thread_member(thread_id));
 create policy "tp_write" on thread_participants for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "thread_read" on threads for select using (
   exists (select 1 from thread_participants tp where tp.thread_id = threads.id and tp.user_id = auth.uid()));
