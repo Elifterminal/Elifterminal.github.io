@@ -312,6 +312,16 @@ body{margin:0; color:var(--fg); overflow-x:hidden; background:var(--bg);
 .palette.open{opacity:1; pointer-events:auto}
 .palette .panel{width:min(720px,92vw)}
 .palette input{width:100%; padding:16px; border:0; outline:0; background:var(--term); color:var(--fg); font:inherit; font-size:16px; border-radius:16px 16px 0 0}
+/* another-user profile overlay */
+.profover{place-items:start center; padding-top:7vh}
+.profover .panel{width:min(640px,94vw)}
+@media(max-width:760px){ .profover{padding-top:0} .profover .panel{width:100vw; max-height:100vh; min-height:100vh; border-radius:0} }
+.upstats{display:flex; gap:20px; margin-top:14px; color:var(--muted); font-size:13px}
+.upstats b{color:var(--fg); font-size:16px; margin-right:4px}
+.upsec{margin-top:20px}
+.upsectitle{font-weight:900; font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--accent1); margin-bottom:8px}
+.tapprof{cursor:pointer}
+.tapprof:hover{opacity:.85}
 .result{padding:12px 16px; border-top:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; cursor:pointer}
 .result:hover{background:color-mix(in oklab,var(--clay) 12%, transparent)}
 .kbd{display:inline-block; border:1px solid var(--border); border-radius:6px; padding:2px 6px; font-size:11.5px; background:color-mix(in oklab,var(--bg) 40%, transparent)}
@@ -789,6 +799,29 @@ footer b{color:var(--fg)}
 </div>
 <div class="lightbox" id="lightbox"><img id="lightboxImg" alt="" /></div>
 
+<!-- another user's profile (tap any name/avatar) -->
+<div class="palette profover" id="profileOverlay" aria-hidden="true">
+  <div class="panel" style="position:relative; overflow:hidden auto; max-height:90vh; padding-bottom:6px">
+    <button class="btn ghost sm" id="upClose" title="Close" style="position:absolute; top:10px; right:10px; z-index:3">✕</button>
+    <div class="cover" id="upCover"></div>
+    <div class="body" style="margin-top:-40px">
+      <div class="phead">
+        <div class="bigavi avi" id="upAvi"></div>
+        <div class="pmeta">
+          <div class="name" id="upName" style="font-size:21px"></div>
+          <div class="role" id="upHandle"></div>
+          <div class="chips" id="upTags"></div>
+          <div class="bio" id="upBio"></div>
+        </div>
+      </div>
+      <div id="upActions" style="display:flex; gap:8px; margin-top:14px; flex-wrap:wrap"></div>
+      <div class="upstats"><span><b id="upStPosts">0</b> posts</span><span><b id="upStPhotos">0</b> photos</span></div>
+      <div class="upsec" id="upPostsSec"><div class="upsectitle">Posts</div><div id="upPosts"></div></div>
+      <div class="upsec" id="upPhotosSec"><div class="upsectitle">Photos</div><div class="pgrid" id="upPhotos"></div></div>
+    </div>
+  </div>
+</div>
+
 <script>
 /* ================= WebGL canyon background ================= */
 (function canyonGL(){
@@ -872,6 +905,8 @@ function avi(h,co,size,radius){ const c=coColor(co||person(h).co); const p=safeP
   const st=`width:${size}px;height:${size}px;border-radius:${radius||12}px;`;
   if(p) return `<div class="avi" style="${st}background-image:url('${esc(p)}')"></div>`;
   return `<div class="avi" style="${st}background:linear-gradient(135deg,${c},color-mix(in oklab,${c} 55%,#000))">${ini('@'+h)}</div>`; }
+/* same avatar, but tappable -> opens that person's profile */
+function aviProf(h,co,size,radius){ return avi(h,co,size,radius).replace('class="avi"',`class="avi tapprof" data-prof="${esc(h)}"`); }
 
 /* ================= state ================= */
 let ME=LS.get('canyonsoc_profile',{name:"You",handle:"you",job:"New here",company:"Self-employed / Other",house:"—",status:"New here",bio:"",pic:""});
@@ -1074,8 +1109,8 @@ async function loadFriends(){
   }
   renderFriends(); renderMe();
 }
-function frow(h,btns){ const p=person(h); return `<div class="frow">${avi(h,p.co,46,12)}
-  <div style="min-width:0"><div style="font-weight:800">${esc(p.name)} <span class="small">@${esc(h)}</span></div><div class="small">${esc(p.co)}${p.job?' · '+esc(p.job):''}</div></div>
+function frow(h,btns){ const p=person(h); return `<div class="frow">${aviProf(h,p.co,46,12)}
+  <div class="tapprof" data-prof="${esc(h)}" style="min-width:0"><div style="font-weight:800">${esc(p.name)} <span class="small">@${esc(h)}</span></div><div class="small">${esc(p.co)}${p.job?' · '+esc(p.job):''}</div></div>
   <div style="display:flex; gap:6px">${btns}</div></div>`; }
 function renderFriends(){
   $('#friendCount').textContent=FRIENDS.length;
@@ -1110,7 +1145,7 @@ document.addEventListener('click',async e=>{
     else if(u) await sb.from('friendships').delete()
       .or(`and(requester_id.eq.${myid},addressee_id.eq.${tid}),and(requester_id.eq.${tid},addressee_id.eq.${myid})`);
   }catch(err){ console.warn('friend action:',err); }
-  await loadFriends(); if(FEED_FILTER==='friends')renderFeed();
+  await loadFriends(); if(FEED_FILTER==='friends')renderFeed(); refreshProfileActions();
 });
 
 /* ================= feed ================= */
@@ -1125,8 +1160,8 @@ function postHTML(p){ const pe=person(p.h); if(!p.comments)p.comments=[];
     ? `<form class="peditform" data-id="${p.id}"><textarea class="peditta" aria-label="Edit your post">${esc(p.x)}</textarea>
         <div style="display:flex;gap:6px;margin-top:6px"><button class="btn sm primary" type="submit">Save</button><button type="button" class="btn ghost sm pcancel" data-id="${p.id}">Cancel</button></div></form>`
     : `<div class="text">${linkify(p.x)}</div>`;
-  return `<div class="post">${avi(p.h,pe.co,46,12)}<div>
-    <div class="handle">@${esc(p.h)}<span class="co">${esc(pe.co)} · ${esc(pe.job)}</span> <span class="meta">· ${esc(p.t)}</span></div>
+  return `<div class="post">${aviProf(p.h,pe.co,46,12)}<div>
+    <div class="handle"><span class="tapprof" data-prof="${esc(p.h)}">@${esc(p.h)}</span><span class="co">${esc(pe.co)} · ${esc(pe.job)}</span> <span class="meta">· ${esc(p.t)}</span></div>
     ${body}${media}
     ${reactsHTML(p,'post',p.id)}
     <div class="actions"><button class="icon-btn cbtn" data-id="${p.id}">💬 <span>${p.comments.length}</span></button>
@@ -1382,6 +1417,7 @@ function renderConvs(){ $('#convlist').innerHTML=THREADS.map(t=>{ const last=t.m
     <div style="min-width:0"><div class="cn">@${esc(t.h)}</div><div class="cp">${last?esc(last.t||'📷 Photo'):'No messages yet'}</div></div>
     ${threadUnread(t)?'<span class="un"></span>':'<span></span>'}</div>`; }).join('')||'<div class="empty">No conversations yet.</div>'; updateDM(); }
 async function openDM(h,co){
+  closeProfile();
   if(!sb||!AUTH_USER){ toast('Sign in to message'); $('#authModal').classList.add('open'); return; }
   const oid=ID_BY_HANDLE[h]; if(!oid){ toast('User not found'); return; }
   show('messages');
@@ -1529,7 +1565,53 @@ async function loadAlerts(){ const el=$('#alertsList'); try{
 /* ================= @mentions + global search ================= */
 function linkify(text){ return esc(text).replace(/@(\w{2,30})/g,(_,h)=>`<a class="mention" data-h="${h}">@${h}</a>`); }
 function peopleAll(){ const a={...PEOPLE}; a[ME.handle]={name:ME.name,co:ME.company,job:ME.job,bio:ME.bio}; return a; }
-document.addEventListener('click',e=>{ const mn=e.target.closest('.mention'); if(mn){ const h=mn.dataset.h; if(h===ME.handle) show('profile'); else if(peopleAll()[h]) openDM(h,(peopleAll()[h]||{}).co); } });
+document.addEventListener('click',e=>{ const mn=e.target.closest('.mention'); if(mn) openProfile(mn.dataset.h); });
+
+/* ===== view another user's profile (tap any name/avatar) ===== */
+let CUR_PROFILE=null;
+function openProfile(h){ if(!h) return;
+  if(h===ME.handle){ closeProfile(); show('profile'); return; }   // own profile = the editable tab
+  if(!PEOPLE[h]){ return; }
+  CUR_PROFILE=h; $('#profileOverlay').classList.add('open'); renderUserProfile(h); }
+function closeProfile(){ $('#profileOverlay').classList.remove('open'); CUR_PROFILE=null; }
+function friendBtnFor(h){
+  if(FRIENDS.includes(h)) return `<button class="btn sm unfriend" data-h="${esc(h)}">✓ Friends · Remove</button>`;
+  if(FRIEND_OUT.includes(h)) return `<button class="btn ghost sm" disabled>Requested</button>`;
+  if(FRIEND_IN.includes(h)) return `<button class="btn primary sm acceptfriend" data-h="${esc(h)}">Accept request</button>`;
+  return `<button class="btn primary sm addfriend" data-h="${esc(h)}">+ Add friend</button>`;
+}
+function refreshProfileActions(){ if(!CUR_PROFILE||!$('#profileOverlay').classList.contains('open'))return;
+  const p=person(CUR_PROFILE);
+  $('#upActions').innerHTML=friendBtnFor(CUR_PROFILE)+`<button class="btn sm act-msg" data-h="${esc(CUR_PROFILE)}" data-co="${esc(p.co)}">✉ Message</button>`; }
+async function renderUserProfile(h){
+  const p=person(h), cov=safePic((PEOPLE[h]&&PEOPLE[h].cover)||'');
+  const cv=$('#upCover');
+  cv.style.cssText = cov ? `background:center/cover no-repeat url('${cov}')`
+    : `background:linear-gradient(135deg,${coColor(p.co)},color-mix(in oklab,${coColor(p.co)} 40%,#000))`;
+  $('#upAvi').outerHTML=avi(h,p.co,100,26).replace('class="avi"','class="avi bigavi" id="upAvi"');
+  $('#upName').textContent=p.name||('@'+h);
+  $('#upHandle').textContent='@'+h+(p.status?' · '+p.status:'');
+  $('#upTags').innerHTML=[p.co,p.job].filter(Boolean).map(x=>`<span class="tag">${esc(x)}</span>`).join('');
+  $('#upBio').textContent=p.bio||'';
+  refreshProfileActions();
+  const theirs=POSTS.filter(x=>x.h===h);
+  $('#upStPosts').textContent=theirs.length;
+  $('#upPosts').innerHTML=theirs.length?theirs.map(postHTML).join(''):'<div class="small">No posts yet.</div>';
+  $('#upStPhotos').textContent='…'; $('#upPhotos').innerHTML='<div class="small">Loading…</div>';
+  const uid=ID_BY_HANDLE[h];
+  if(sb&&uid){
+    const { data }=await sb.from('photos').select('id,url,caption').eq('user_id',uid).order('created_at',{ascending:false});
+    if(CUR_PROFILE!==h) return;   // navigated away while loading
+    const ph=data||[];
+    $('#upStPhotos').textContent=ph.length;
+    $('#upPhotos').innerHTML=ph.length?ph.map(x=>{ const s=safePic(x.url);
+      return `<div class="photo"><div class="img" data-src="${esc(s)}" style="background-image:url('${esc(s)}')"></div>${x.caption?`<div class="pcap">${esc(x.caption)}</div>`:''}</div>`; }).join('')
+      :'<div class="small">No photos yet.</div>';
+  } else { $('#upStPhotos').textContent='0'; $('#upPhotos').innerHTML='<div class="small">No photos yet.</div>'; }
+}
+$('#upClose').onclick=closeProfile;
+$('#profileOverlay').addEventListener('click',e=>{ if(e.target.id==='profileOverlay') closeProfile(); });
+document.addEventListener('click',e=>{ const t=e.target.closest('.tapprof'); if(t&&t.dataset.prof) openProfile(t.dataset.prof); });
 
 const mbox=document.createElement('div'); mbox.className='mentionbox'; document.body.appendChild(mbox);
 let mTarget=null,mStart=0,mItems=[],mIndex=0;
@@ -1570,7 +1652,7 @@ function runSearch(q){ if(!q){ searchResults.innerHTML='<div class="sgroup">Type
   if(rides.length) html+='<div class="sgroup">Rides</div>'+rides.map(r=>`<div class="sresult" data-act="transit"><span class="si">🚗</span><div><b>${esc(r.to)}</b> <span class="small">${esc(r.when)} · @${esc(r.by)}</span></div></div>`).join('');
   searchResults.innerHTML=html||'<div class="sgroup">No matches</div>'; }
 searchResults.addEventListener('click',e=>{ const r=e.target.closest('.sresult'); if(!r)return; const act=r.dataset.act; closeSearch();
-  if(act==='person'){ const h=r.dataset.h; if(h===ME.handle) show('profile'); else openDM(h,(peopleAll()[h]||{}).co); }
+  if(act==='person'){ openProfile(r.dataset.h); }
   else if(act==='post'){ FEED_FILTER='all'; $$('#feedSeg button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.f==='all')); renderFeed(); show('home'); }
   else if(act==='market'){ MK_TYPE='All'; MK_TAGS.clear(); MK_Q=(r.dataset.q||'').toLowerCase(); const ms=$('#mkSearch'); if(ms)ms.value=r.dataset.q||''; renderMarket(); show('marketplace'); }
   else if(act==='transit'){ show('transit'); } });
@@ -1598,10 +1680,10 @@ function handleAuth(session,evt){ AUTH_USER=session?session.user:null; updateAut
    user. Read-only, public per RLS. Excludes me (ME is merged in by peopleAll). */
 let PROF_BY_ID=Object.create(null);
 async function loadDirectory(){ if(!sb) return;
-  const { data,error }=await sb.from('profiles').select('user_id,handle,name,company,job,bio,pic_url');
+  const { data,error }=await sb.from('profiles').select('user_id,handle,name,company,job,bio,pic_url,cover_url,status');
   if(error){ console.warn('directory load:',error); return; }
   const next=Object.create(null), byId=Object.create(null), idByH=Object.create(null); const RESV=['__proto__','constructor','prototype'];
-  (data||[]).forEach(p=>{ const prof={name:p.name||('@'+p.handle),co:p.company||'',job:p.job||'',bio:p.bio||'',pic:safePic(p.pic_url),handle:p.handle};
+  (data||[]).forEach(p=>{ const prof={name:p.name||('@'+p.handle),co:p.company||'',job:p.job||'',bio:p.bio||'',pic:safePic(p.pic_url),cover:safePic(p.cover_url),status:p.status||'',handle:p.handle};
     if(p.user_id) byId[p.user_id]=prof;
     if(p.handle&&!RESV.includes(p.handle)) idByH[p.handle]=p.user_id;
     if(p.handle&&p.handle!==ME.handle&&!RESV.includes(p.handle)) next[p.handle]=prof; });
