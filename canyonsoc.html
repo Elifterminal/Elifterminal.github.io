@@ -368,6 +368,28 @@ footer b{color:var(--fg)}
   .bigavi{width:84px; height:84px; border-radius:22px}
   .seg{margin-left:0}
 }
+/* mobile bottom nav — on phones the top tab row is too cramped to show every
+   section, so swap it for an always-visible bottom bar (familiar app pattern) */
+.bottomnav{display:none}
+@media(max-width:760px){
+  .tabs{display:none}
+  .bottomnav{display:flex; position:fixed; left:0; right:0; bottom:0; z-index:60;
+    background:color-mix(in oklab,var(--bg-2) 94%, transparent);
+    -webkit-backdrop-filter:blur(14px) saturate(1.1); backdrop-filter:blur(14px) saturate(1.1);
+    border-top:1px solid var(--border); padding:5px 4px calc(5px + env(safe-area-inset-bottom,0px))}
+  .bottomnav .bn{flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; min-width:0;
+    background:none; border:0; color:var(--muted); font-weight:800; font-size:10px; letter-spacing:.01em;
+    padding:5px 2px; cursor:pointer; position:relative; border-radius:10px; transition:.15s}
+  .bottomnav .bn[hidden]{display:none}
+  .bottomnav .bn .bi{font-size:19px; line-height:1}
+  .bottomnav .bn[aria-current="page"]{color:var(--accent1)}
+  .bottomnav .bn[aria-current="page"] .bi{transform:translateY(-1px)}
+  .bottomnav .bn .dm-dot{position:absolute; top:2px; right:calc(50% - 18px); width:7px; height:7px;
+    border-radius:50%; background:var(--clay-bright); display:none}
+  .bottomnav .bn.has-unread .dm-dot{display:block}
+  .main{padding-bottom:96px}
+  .fabs{bottom:84px}            /* lift the theme/palette FABs above the bottom bar */
+}
 @media(prefers-reduced-motion:reduce){ *{animation:none!important; transition:none!important} }
 </style>
 </head>
@@ -398,6 +420,15 @@ footer b{color:var(--fg)}
     <button id="btnTheme" class="btn sm" title="Day/Night (T)">☀︎ / ☾</button>
     <button id="btnPalette" class="btn sm" title="Command Palette (⌘/Ctrl+K)">⌘K</button>
   </div>
+</nav>
+
+<nav class="bottomnav" id="bottomNav" role="navigation" aria-label="Sections">
+  <button class="bn" data-view="home" aria-current="page"><span class="bi">🏠</span>Home</button>
+  <button class="bn" data-view="transit"><span class="bi">🚐</span>Transit</button>
+  <button class="bn" data-view="marketplace"><span class="bi">🪧</span>Market</button>
+  <button class="bn" data-view="messages"><span class="bi">💬</span>Messages<span class="dm-dot"></span></button>
+  <button class="bn" data-view="profile"><span class="bi">👤</span>Profile</button>
+  <button class="bn" data-view="admin" id="bnAdmin" hidden><span class="bi">🛡</span>Admin</button>
 </nav>
 
 <div class="notifwrap" id="notifPanel">
@@ -589,7 +620,7 @@ footer b{color:var(--fg)}
   <!-- ============ MESSAGES ============ -->
   <div class="view" id="view-messages">
     <article class="panel reveal" style="overflow:hidden">
-      <header><span class="badge"><span class="spark"></span> 💬 MESSAGES</span> Direct messages <span class="demo-pill">stored on this device</span></header>
+      <header><span class="badge"><span class="spark"></span> 💬 MESSAGES</span> Direct messages <span class="demo-pill" style="color:var(--ok)">live · real-time</span></header>
       <div class="msgwrap" id="msgwrap">
         <div class="convlist" id="convlist"></div>
         <div class="thread" id="thread">
@@ -724,7 +755,7 @@ footer b{color:var(--fg)}
 
 <footer>
   <b>CanyonSoc</b> · an independent community network for the people who live and work around the <b>Grand Canyon</b>. Not affiliated with any single concessioner or the NPS.
-  <br>The live data is real — weather, NWS alerts, NPS park alerts &amp; ranger night-sky programs, and tonight's sky. The park bus &amp; Groome shuttle times are the actual published schedules. Sign-in and profiles run on a real backend; the feed, photos, friends, marketplace, rides &amp; messages still save to your device for now, with more backend wiring on the way.
+  <br>The live data is real — weather, NWS alerts, NPS park alerts &amp; ranger night-sky programs, and tonight's sky. The park bus &amp; Groome shuttle times are the actual published schedules. Everything social runs on a real backend now — sign-in, profiles, the feed, photos, friends, marketplace, rides, and live direct messages are all shared across the community, not just your device.
   Toggle <span class="kbd">T</span> day/night · <span class="kbd">⌘/Ctrl K</span> palette.
 </footer>
 
@@ -841,14 +872,16 @@ let ME=LS.get('canyonsoc_profile',{name:"You",handle:"you",job:"New here",compan
 let FRIENDS=[];           // accepted friends (handles) — filled by loadFriends from the backend
 let FRIEND_IN=[];         // incoming pending requests (handles who asked me)
 let FRIEND_OUT=[];        // outgoing pending requests (handles I asked)
-let PHOTOS=LS.get('canyonsoc_photos',[]);
+let PHOTOS=[];
 let PARKS=LS.get('canyonsoc_parks',[]);
-let RIDES=LS.get('canyonsoc_rides',[]);
+let RIDES=[];
 let _pid=1; const nid=()=>'p'+(_pid++);
 let POSTS=[];
 const TYPES=['All','For sale','ISO','Events','Announcements','Free','Yard sale'];
 const TAGS=['Cars','Computers','Clothes','Furniture','Outdoor gear','Bikes','Housing','Tickets','Tools','Appliances','Free stuff','Misc'];
-let MARKET=LS.get('canyonsoc_market',[]);
+let MARKET=[];
+let MREACTS=LS.get('canyonsoc_mreacts',{});  // marketplace reactions, keyed by listing id (device-local)
+let PREACTS=LS.get('canyonsoc_preacts',{});  // photo reactions, keyed by photo id (device-local)
 /* Park alerts — pulled live from the NPS data API (Grand Canyon, parkCode=grca)
    through a Supabase Edge Function proxy so the NPS key never ships in this public
    repo. Starts empty; loadParkAlerts() fills it. */
@@ -909,7 +942,7 @@ function reactsHTML(o,kind,id){ if(!o.reacts)o.reacts={}; if(!o.mine)o.mine=[];
   const summary=Object.entries(o.reacts).filter(([,n])=>n>0).map(([e,n])=>`<button class="rx ${o.mine.includes(e)?'on':''}" data-e="${e}">${e} ${n}</button>`).join('');
   return `<div class="reacts" data-kind="${kind}" data-id="${id}">${summary}<button class="rx add" data-e="__pick">😊 React</button>
     <span class="rxpick">${REACTS.map(e=>`<button class="rxopt" data-e="${e}">${e}</button>`).join('')}</span></div>`; }
-function findReactObj(kind,id){ if(kind==='post') return POSTS.find(p=>p.id===id); if(kind==='photo') return PHOTOS.find(p=>p.id===id); if(kind==='market') return MARKET[+id]; return null; }
+function findReactObj(kind,id){ if(kind==='post') return POSTS.find(p=>p.id===id); if(kind==='photo') return PHOTOS.find(p=>String(p.id)===String(id)); if(kind==='market') return MARKET.find(m=>String(m.id)===String(id)); return null; }
 async function applyReact(kind,id,e){
   if(kind==='post'){ if(!sb||!AUTH_USER){ toast('Sign in to react'); return; }
     const o=POSTS.find(p=>String(p.id)===String(id)); const has=o&&o.mine.includes(e);
@@ -920,8 +953,8 @@ async function applyReact(kind,id,e){
   const has=o.mine.includes(e);
   if(has){ o.mine=o.mine.filter(x=>x!==e); o.reacts[e]=Math.max(0,(o.reacts[e]||1)-1); if(!o.reacts[e])delete o.reacts[e]; }
   else{ o.mine.push(e); o.reacts[e]=(o.reacts[e]||0)+1; }
-  if(kind==='photo'){ LS.set('canyonsoc_photos',PHOTOS); renderPhotos(); }
-  else if(kind==='market'){ LS.set('canyonsoc_market',MARKET); renderMarket(); } }
+  if(kind==='photo'){ PREACTS[id]={reacts:o.reacts,mine:o.mine}; LS.set('canyonsoc_preacts',PREACTS); renderPhotos(); }
+  else if(kind==='market'){ MREACTS[id]={reacts:o.reacts,mine:o.mine}; LS.set('canyonsoc_mreacts',MREACTS); renderMarket(); } }
 document.addEventListener('click',e=>{
   const add=e.target.closest('.rx.add'), opt=e.target.closest('.rxopt'), tally=e.target.closest('.rx:not(.add)');
   if(!e.target.closest('.rxpick')&&!add) $$('.reacts.pick-open').forEach(b=>b.classList.remove('pick-open'));
@@ -973,8 +1006,15 @@ function readImage(file,max,cb){ if(!file)return; const r=new FileReader();
     c.getContext('2d').drawImage(img,0,0,w,h); cb(c.toDataURL('image/jpeg',0.82)); }; img.src=r.result; };
   r.readAsDataURL(file); }
 document.addEventListener('click',e=>{ if(e.target.closest('#pfPicBtn')) $('#pfPicInput').click(); if(e.target.closest('#pfCoverBtn')) $('#pfCoverInput').click(); });
-$('#pfPicInput').addEventListener('change',e=>{ readImage(e.target.files[0],320,d=>{ ME.pic=d; if(LS.set('canyonsoc_profile',ME)){ renderMe(); renderFeed(); renderConvs(); } }); e.target.value=''; });
-$('#pfCoverInput').addEventListener('change',e=>{ readImage(e.target.files[0],1100,d=>{ ME.cover=d; if(LS.set('canyonsoc_profile',ME)) renderMe(); }); e.target.value=''; });
+/* profile pic + cover → Storage (so other users actually load them; data URLs would bloat every directory read) */
+$('#pfPicInput').addEventListener('change',e=>{ readImage(e.target.files[0],400,async d=>{
+  if(sb&&AUTH_USER){ const url=await uploadDataUrl(d,'avatar'); if(url) d=url; }
+  ME.pic=d; LS.set('canyonsoc_profile',ME); renderMe(); renderFeed(); renderConvs();
+  if(sb&&AUTH_USER) await saveProfileToCloud(); }); e.target.value=''; });
+$('#pfCoverInput').addEventListener('change',e=>{ readImage(e.target.files[0],1200,async d=>{
+  if(sb&&AUTH_USER){ const url=await uploadDataUrl(d,'cover'); if(url) d=url; }
+  ME.cover=d; LS.set('canyonsoc_profile',ME); renderMe();
+  if(sb&&AUTH_USER) await saveProfileToCloud(); }); e.target.value=''; });
 
 /* photos */
 function renderPhotos(){ const g=$('#photoGrid');
@@ -984,9 +1024,17 @@ function renderPhotos(){ const g=$('#photoGrid');
 }
 document.addEventListener('click',e=>{ if(e.target.closest('#addPhoto')) $('#photoInput').click();
   const im=e.target.closest('.photo .img,.zoom,.msgimg'); if(im){ const ls=safePic(im.dataset.src); if(ls){ $('#lightboxImg').src=ls; $('#lightbox').classList.add('open'); } } });
+/* photos — uploaded to Supabase Storage, listed from the photos table (your own gallery) */
+async function loadPhotos(){ if(!sb||!AUTH_USER){ PHOTOS=[]; renderPhotos(); return; }
+  const { data,error }=await sb.from('photos').select('id,url,caption,created_at').eq('user_id',AUTH_USER.id).order('created_at',{ascending:false});
+  if(error){ console.warn('photos load:',error); return; }
+  PHOTOS=(data||[]).map(p=>{ const rk=PREACTS[p.id]||{}; return {id:p.id, src:safePic(p.url), cap:p.caption||'', reacts:rk.reacts||{}, mine:rk.mine||[]}; });
+  renderPhotos(); }
 $('#photoInput').addEventListener('change',e=>{ const f=e.target.files[0]; if(!f)return;
-  readImage(f,640,d=>{ const cap=prompt('Caption (optional):')||''; PHOTOS.unshift({id:nid(),src:d,cap,reacts:{},mine:[]});
-    if(LS.set('canyonsoc_photos',PHOTOS)) renderPhotos(); renderMe(); }); e.target.value=''; });
+  if(!sb||!AUTH_USER){ toast('Sign in to add photos'); $('#authModal').classList.add('open'); e.target.value=''; return; }
+  readImage(f,1200,async d=>{ const cap=prompt('Caption (optional):')||''; const url=await uploadDataUrl(d,'photo'); if(!url)return;
+    const { error }=await sb.from('photos').insert({user_id:AUTH_USER.id, url, caption:cap||null});
+    if(error){ toast('⚠️ '+error.message); return; } await loadPhotos(); renderMe(); toast('Photo added ✓'); }); e.target.value=''; });
 $('#lightbox').addEventListener('click',()=>$('#lightbox').classList.remove('open'));
 
 /* park experience */
@@ -1213,9 +1261,21 @@ function renderRides(){ $('#rides').innerHTML=RIDES.map(r=>`<div class="ride"><d
     <div class="what"><b>@${esc(r.by)}</b> ${r.mine?'<span class="tag" style="margin-left:6px">you</span>':''}<div class="seats">${esc(r.seats)} · ${esc(r.co)}</div></div>
     <button class="btn sm seats-btn act-msg" data-h="${esc(r.by)}" data-co="${esc(r.co)}" ${r.mine?'disabled':''}>${r.mine?'Posted':'✉ Message'}</button></div>`).join('');
   $('#wRides').textContent=RIDES.length+' active'; }
-$('#ridePost').onclick=()=>{ const to=$('#rideTo').value.trim(),when=$('#rideWhen').value.trim(),seats=$('#rideSeats').value.trim();
-  if(!to||!when){ $('#rideTo').focus(); return; } RIDES.unshift({to,when,seats:seats||'open',by:ME.handle,co:ME.company,mine:true});
-  LS.set('canyonsoc_rides',RIDES); $('#rideTo').value=$('#rideWhen').value=$('#rideSeats').value=''; renderRides(); };
+/* rides — shared via the rides table (public read, own write per RLS) */
+async function loadRides(){ if(!sb){ renderRides(); return; }
+  const { data,error }=await sb.from('rides').select('id,user_id,destination,when_text,seats_note,created_at').order('created_at',{ascending:false});
+  if(error){ console.warn('rides load:',error); return; }
+  const myid=AUTH_USER&&AUTH_USER.id;
+  RIDES=(data||[]).map(r=>{ const op=PROF_BY_ID[r.user_id]||{}; const mine=r.user_id===myid;
+    return {id:r.id, to:r.destination, when:r.when_text, seats:r.seats_note||'open',
+      by:mine?ME.handle:(op.handle||'user'), co:mine?ME.company:(op.co||''), mine}; });
+  renderRides(); }
+$('#ridePost').onclick=async()=>{ const to=$('#rideTo').value.trim(),when=$('#rideWhen').value.trim(),seats=$('#rideSeats').value.trim();
+  if(!to||!when){ $('#rideTo').focus(); return; }
+  if(!sb||!AUTH_USER){ toast('Sign in to post a ride'); $('#authModal').classList.add('open'); return; }
+  const { error }=await sb.from('rides').insert({user_id:AUTH_USER.id, destination:to, when_text:when, seats_note:seats||'open'});
+  if(error){ toast('⚠️ '+error.message); return; }
+  $('#rideTo').value=$('#rideWhen').value=$('#rideSeats').value=''; await loadRides(); toast('Ride posted ✓'); };
 
 /* ================= marketplace ================= */
 let MK_TYPE='All', MK_TAGS=new Set(), MK_Q='', NEW_TAGS=new Set();
@@ -1230,8 +1290,8 @@ function renderMarket(){
     <div class="price" style="margin:6px 0">${esc(m.p)}</div>
     <div class="chips" style="margin:0 0 8px">${(m.tags||[]).map(t=>`<span class="ttag">${esc(t)}</span>`).join('')}</div>
     <div class="small">@${esc(m.by)} · <span style="color:${coColor(m.co)}">${esc(m.co)}</span></div>
-    ${reactsHTML(m,'market',i)}
-    <button class="btn sm act-msg" style="margin-top:8px;width:100%" data-h="${esc(m.by)}" data-co="${esc(m.co)}" ${m.by===ME.handle?'disabled':''}>${m.by===ME.handle?'Your listing':'✉ Message'}</button></div>`).join('')
+    ${reactsHTML(m,'market',m.id)}
+    <button class="btn sm act-msg" style="margin-top:8px;width:100%" data-h="${esc(m.by)}" data-co="${esc(m.co)}" ${m.owner?'disabled':''}>${m.owner?'Your listing':'✉ Message'}</button></div>`).join('')
     ||'<div class="small">Nothing matches that filter yet.</div>';
   $('#wListings').textContent=MARKET.length+' active';
 }
@@ -1240,37 +1300,106 @@ $('#typeRow').addEventListener('click',e=>{ const b=e.target.closest('.cat'); if
 $('#tagRow').addEventListener('click',e=>{ const b=e.target.closest('.chip'); if(!b)return; const t=b.dataset.tag; MK_TAGS.has(t)?MK_TAGS.delete(t):MK_TAGS.add(t); renderMarket(); });
 $('#mkNewTags').addEventListener('click',e=>{ const b=e.target.closest('.chip'); if(!b)return; const t=b.dataset.newtag; NEW_TAGS.has(t)?NEW_TAGS.delete(t):NEW_TAGS.add(t); renderNewTags(); });
 $('#mkSearch').addEventListener('input',e=>{ MK_Q=e.target.value.toLowerCase().trim(); renderMarket(); });
-$('#mkPost').onclick=()=>{ const t=$('#mkTitle').value.trim(); if(!t){ $('#mkTitle').focus(); return; }
-  MARKET.unshift({t,p:$('#mkPrice').value.trim()||'—',type:$('#mkType').value,tags:[...NEW_TAGS],by:ME.handle,co:ME.company,reacts:{},mine:[]});
-  LS.set('canyonsoc_market',MARKET); $('#mkTitle').value=$('#mkPrice').value=''; NEW_TAGS.clear(); renderNewTags(); MK_TYPE='All'; renderMarket(); renderMe(); };
+/* marketplace listings — shared via the listings table (public read, own write per RLS) */
+async function loadMarket(){ if(!sb){ renderMarket(); return; }
+  const { data,error }=await sb.from('listings').select('id,user_id,title,price,type,tags,created_at').order('created_at',{ascending:false});
+  if(error){ console.warn('market load:',error); return; }
+  const myid=AUTH_USER&&AUTH_USER.id;
+  MARKET=(data||[]).map(m=>{ const op=PROF_BY_ID[m.user_id]||{}; const owner=m.user_id===myid; const rk=MREACTS[m.id]||{};
+    return {id:m.id, t:m.title, p:m.price||'—', type:m.type, tags:m.tags||[],
+      by:owner?ME.handle:(op.handle||'user'), co:owner?ME.company:(op.co||''), owner,
+      reacts:rk.reacts||{}, mine:rk.mine||[]}; });   // `mine` = my reactions (reactsHTML); `owner` = I posted it
+  renderMarket(); }
+$('#mkPost').onclick=async()=>{ const t=$('#mkTitle').value.trim(); if(!t){ $('#mkTitle').focus(); return; }
+  if(!sb||!AUTH_USER){ toast('Sign in to post a listing'); $('#authModal').classList.add('open'); return; }
+  const { error }=await sb.from('listings').insert({user_id:AUTH_USER.id, title:t, price:$('#mkPrice').value.trim()||'—', type:$('#mkType').value, tags:[...NEW_TAGS]});
+  if(error){ toast('⚠️ '+error.message); return; }
+  $('#mkTitle').value=$('#mkPrice').value=''; NEW_TAGS.clear(); renderNewTags(); MK_TYPE='All'; await loadMarket(); renderMe(); toast('Listed ✓'); };
 
-/* ================= messaging ================= */
-let THREADS=LS.get('canyonsoc_threads',[]);
-let ACTIVE=null;
-const saveThreads=()=>LS.set('canyonsoc_threads',THREADS);
-const unreadCount=()=>THREADS.filter(t=>t.unread).length;
-function updateDM(){ $('.tab[data-view="messages"]').classList.toggle('has-unread',unreadCount()>0); }
-function openDM(h,co){ let th=THREADS.find(t=>t.h===h); if(!th){ th={h,co:co||person(h).co||'',msgs:[],unread:false}; THREADS.unshift(th); saveThreads(); } show('messages'); selectConv(h); }
+/* ================= messaging — real threads via Supabase + realtime (Phase 4) ================= */
+let THREADS=[];                        // [{id, h, oid, co, msgs:[{id,me,t,img,at,created_at}]}]
+let ACTIVE=null;                       // active thread id (number) or null
+let DM_BY_ID=Object.create(null);      // thread id -> THREADS entry
+let SEEN=LS.get('canyonsoc_seen',{});  // {threadId: lastViewedISO} — unread tracking, client-side
+let dmChannel=null;
+const fmtTime=iso=>{ try{ return new Date(iso).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}); }catch(e){ return ''; } };
+function threadUnread(t){ const last=t.msgs[t.msgs.length-1]; if(!last||last.me) return false;
+  const seen=SEEN[t.id]; return !seen || new Date(last.created_at) > new Date(seen); }
+const unreadCount=()=>THREADS.filter(threadUnread).length;
+function updateDM(){ const on=unreadCount()>0; $$('[data-view="messages"]').forEach(t=>t.classList.toggle('has-unread',on)); }
+
+async function loadThreads(){
+  if(!sb||!AUTH_USER){ THREADS=[]; DM_BY_ID=Object.create(null); renderConvs(); return; }
+  const myid=AUTH_USER.id;
+  const { data:mine,error:e1 }=await sb.from('thread_participants').select('thread_id').eq('user_id',myid);
+  if(e1){ console.warn('threads load:',e1); return; }
+  const ids=(mine||[]).map(r=>r.thread_id);
+  if(!ids.length){ THREADS=[]; DM_BY_ID=Object.create(null); renderConvs(); return; }
+  const { data:parts }=await sb.from('thread_participants').select('thread_id,user_id').in('thread_id',ids);
+  const { data:msgs }=await sb.from('messages').select('id,thread_id,sender_id,body,image_url,created_at').in('thread_id',ids).order('created_at');
+  const byThread=Object.create(null);
+  ids.forEach(id=>byThread[id]={id, oid:null, msgs:[]});
+  (parts||[]).forEach(p=>{ if(p.user_id!==myid && byThread[p.thread_id]) byThread[p.thread_id].oid=p.user_id; });
+  (msgs||[]).forEach(m=>{ const t=byThread[m.thread_id]; if(!t)return;
+    t.msgs.push({id:m.id, me:m.sender_id===myid, t:m.body||'', img:safePic(m.image_url), at:fmtTime(m.created_at), created_at:m.created_at}); });
+  const list=Object.values(byThread).map(t=>{ const op=PROF_BY_ID[t.oid]||{}; return {...t, h:op.handle||'user', co:op.co||''}; });
+  list.sort((a,b)=>{ const la=a.msgs[a.msgs.length-1], lb=b.msgs[b.msgs.length-1];
+    return new Date(lb?lb.created_at:0)-new Date(la?la.created_at:0); });
+  THREADS=list; DM_BY_ID=Object.create(null); list.forEach(t=>DM_BY_ID[t.id]=t);
+  renderConvs(); if(ACTIVE&&DM_BY_ID[ACTIVE]) renderThread(DM_BY_ID[ACTIVE]);
+}
 function renderConvs(){ $('#convlist').innerHTML=THREADS.map(t=>{ const last=t.msgs[t.msgs.length-1];
-  return `<div class="conv" data-h="${esc(t.h)}" aria-selected="${ACTIVE===t.h}">${avi(t.h,t.co,42,11)}
+  return `<div class="conv" data-tid="${t.id}" aria-selected="${ACTIVE===t.id}">${avi(t.h,t.co,42,11)}
     <div style="min-width:0"><div class="cn">@${esc(t.h)}</div><div class="cp">${last?esc(last.t||'📷 Photo'):'No messages yet'}</div></div>
-    ${t.unread?'<span class="un"></span>':'<span></span>'}</div>`; }).join('')||'<div class="empty">No conversations yet.</div>'; updateDM(); }
-function selectConv(h){ ACTIVE=h; const th=THREADS.find(t=>t.h===h); if(!th)return; th.unread=false; saveThreads();
-  $('#msgwrap').classList.add('thread-open');
-  $('#threadEmpty').style.display='none'; $('#thead').style.display='flex'; $('#tbody').style.display='flex'; $('#tcompose').style.display='flex';
+    ${threadUnread(t)?'<span class="un"></span>':'<span></span>'}</div>`; }).join('')||'<div class="empty">No conversations yet.</div>'; updateDM(); }
+async function openDM(h,co){
+  if(!sb||!AUTH_USER){ toast('Sign in to message'); $('#authModal').classList.add('open'); return; }
+  const oid=ID_BY_HANDLE[h]; if(!oid){ toast('User not found'); return; }
+  show('messages');
+  const { data:tid,error }=await sb.rpc('start_dm',{other:oid});
+  if(error){ toast('⚠️ '+error.message); return; }
+  await loadThreads(); selectConv(tid);
+}
+function renderThread(th){
   $('#thAvi').outerHTML=avi(th.h,th.co,38,11).replace('class="avi"','class="avi" id="thAvi"');
   $('#thName').textContent='@'+th.h; $('#thSub').textContent=th.co||'CanyonSoc';
   $('#tbody').innerHTML=th.msgs.map(m=>{ const mim=safePic(m.img); const body=mim?`<div class="msgimg" data-src="${esc(mim)}"><img src="${esc(mim)}" alt="" loading="lazy"></div>`:esc(m.t);
     return `<div class="bubble ${m.me?'me':'them'}${m.img?' hasimg':''}">${body}<span class="bt">${esc(m.at||'')}</span></div>`; }).join('')||'<div class="small" style="margin:auto">Say hi 👋</div>';
-  $('#tbody').scrollTop=$('#tbody').scrollHeight; renderConvs(); }
-$('#convlist').addEventListener('click',e=>{ const c=e.target.closest('.conv'); if(c) selectConv(c.dataset.h); });
+  $('#tbody').scrollTop=$('#tbody').scrollHeight;
+}
+function selectConv(tid){ tid=+tid; const th=DM_BY_ID[tid]; if(!th)return; ACTIVE=tid;
+  SEEN[tid]=new Date().toISOString(); LS.set('canyonsoc_seen',SEEN);
+  $('#msgwrap').classList.add('thread-open');
+  $('#threadEmpty').style.display='none'; $('#thead').style.display='flex'; $('#tbody').style.display='flex'; $('#tcompose').style.display='flex';
+  renderThread(th); renderConvs(); }
+$('#convlist').addEventListener('click',e=>{ const c=e.target.closest('.conv'); if(c) selectConv(c.dataset.tid); });
 $('#thBack').onclick=()=>$('#msgwrap').classList.remove('thread-open');
-$('#tcompose').addEventListener('submit',e=>{ e.preventDefault(); const inp=$('#tinput'),t=inp.value.trim(); if(!t||!ACTIVE)return;
-  const th=THREADS.find(x=>x.h===ACTIVE); th.msgs.push({me:true,t,at:new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}); saveThreads(); inp.value=''; selectConv(ACTIVE); });
+$('#tcompose').addEventListener('submit',async e=>{ e.preventDefault(); const inp=$('#tinput'),t=inp.value.trim();
+  if(!t||!ACTIVE||!sb||!AUTH_USER)return; inp.value='';
+  const { error }=await sb.from('messages').insert({thread_id:ACTIVE, sender_id:AUTH_USER.id, body:t});
+  if(error){ toast('⚠️ '+error.message); inp.value=t; } });
 $('#msgImgBtn').onclick=()=>{ if(ACTIVE) $('#msgImgInput').click(); };
-$('#msgImgInput').addEventListener('change',e=>{ if(!ACTIVE){ e.target.value=''; return; } readImage(e.target.files[0],800,d=>{ const th=THREADS.find(x=>x.h===ACTIVE);
-  th.msgs.push({me:true,img:d,at:new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}); if(saveThreads()) selectConv(ACTIVE); }); e.target.value=''; });
+$('#msgImgInput').addEventListener('change',e=>{ if(!ACTIVE||!sb||!AUTH_USER){ e.target.value=''; return; }
+  readImage(e.target.files[0],1000,async d=>{ const url=await uploadDataUrl(d,'msg'); if(!url)return;
+    const { error }=await sb.from('messages').insert({thread_id:ACTIVE, sender_id:AUTH_USER.id, image_url:url});
+    if(error) toast('⚠️ '+error.message); }); e.target.value=''; });
 document.body.addEventListener('click',e=>{ const b=e.target.closest('.act-msg'); if(b&&!b.disabled) openDM(b.dataset.h,b.dataset.co); });
+/* realtime: live-append new messages for any thread I'm in (RLS limits delivery to my threads) */
+function setupDMRealtime(){ if(!sb||!AUTH_USER||dmChannel) return;
+  dmChannel=sb.channel('dm-'+AUTH_USER.id)
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'messages'}, payload=>{
+      const m=payload.new; const th=DM_BY_ID[m.thread_id];
+      if(!th){ loadThreads(); return; }              // new/unknown thread → resync
+      if(th.msgs.some(x=>String(x.id)===String(m.id))) return;  // dedupe own echo
+      const mine=m.sender_id===AUTH_USER.id;
+      th.msgs.push({id:m.id, me:mine, t:m.body||'', img:safePic(m.image_url), at:fmtTime(m.created_at), created_at:m.created_at});
+      THREADS=THREADS.filter(x=>x.id!==th.id); THREADS.unshift(th);   // bump to top
+      if(ACTIVE===th.id){ SEEN[th.id]=new Date().toISOString(); LS.set('canyonsoc_seen',SEEN); renderThread(th); }
+      renderConvs();
+      if(!mine && ACTIVE!==th.id) toast('💬 New message from @'+th.h);
+    }).subscribe();
+}
+function teardownDMRealtime(){ if(dmChannel){ try{ sb.removeChannel(dmChannel); }catch(e){} dmChannel=null; } }
 
 /* ================= notifications + toasts ================= */
 let NOTIFS=LS.get('canyonsoc_notifs',[]);
@@ -1310,12 +1439,13 @@ $('#notifSeeAll').onclick=()=>{ $('#notifPanel').classList.remove('open'); rende
 
 /* ================= tabs / palette / theme ================= */
 function show(v){ $$('.view').forEach(x=>x.classList.toggle('active',x.id==='view-'+v));
-  $$('.tab').forEach(t=>t.setAttribute('aria-current',t.dataset.view===v?'page':'false'));
+  $$('.tab,.bn').forEach(t=>t.setAttribute('aria-current',t.dataset.view===v?'page':'false'));
   $$('.reveal').forEach(el=>{ if(el.offsetParent!==null) requestAnimationFrame(()=>el.classList.add('in')); });
   if(v==='messages'&&!ACTIVE) $('#msgwrap').classList.remove('thread-open');
   if(v==='admin') adminRenderTab();
   window.scrollTo({top:0,behavior:'smooth'}); }
 $('#tabs').addEventListener('click',e=>{ const t=e.target.closest('.tab'); if(t) show(t.dataset.view); });
+$('#bottomNav').addEventListener('click',e=>{ const t=e.target.closest('.bn'); if(t) show(t.dataset.view); });
 document.addEventListener('click',e=>{ const g=e.target.closest('[data-goto]'); if(g) show(g.dataset.goto); });
 
 const root=document.documentElement;
@@ -1419,7 +1549,8 @@ function updateAuthUI(){ const b=$('#btnAuth'); if(!b)return;
   if(AUTH_USER){ b.textContent='@'+(ME.handle||'you'); b.classList.remove('primary'); b.title='Signed in — click to sign out'; }
   else { b.textContent='Sign in'; b.classList.add('primary'); b.title='Sign in'; } }
 function handleAuth(session,evt){ AUTH_USER=session?session.user:null; updateAuthUI();
-  if(AUTH_USER){ loadProfileFromCloud(); adminGate(evt==='SIGNED_IN'); } else { const t=$('#tabAdmin'); if(t)t.hidden=true; }
+  if(AUTH_USER){ loadProfileFromCloud(); adminGate(evt==='SIGNED_IN'); setupDMRealtime(); }
+  else { const t=$('#tabAdmin'); if(t)t.hidden=true; const bn=$('#bnAdmin'); if(bn)bn.hidden=true; teardownDMRealtime(); ACTIVE=null; }
   loadDirectory(); }
 /* Real people directory: every profile in Supabase becomes a searchable/mentionable
    user. Read-only, public per RLS. Excludes me (ME is merged in by peopleAll). */
@@ -1432,7 +1563,7 @@ async function loadDirectory(){ if(!sb) return;
     if(p.user_id) byId[p.user_id]=prof;
     if(p.handle&&!RESV.includes(p.handle)) idByH[p.handle]=p.user_id;
     if(p.handle&&p.handle!==ME.handle&&!RESV.includes(p.handle)) next[p.handle]=prof; });
-  PEOPLE=next; PROF_BY_ID=byId; ID_BY_HANDLE=idByH; loadFriends(); renderConvs(); loadFeed(); }
+  PEOPLE=next; PROF_BY_ID=byId; ID_BY_HANDLE=idByH; loadFriends(); loadThreads(); loadFeed(); loadMarket(); loadRides(); loadPhotos(); }
 async function loadProfileFromCloud(){ if(!sb||!AUTH_USER)return;
   const { data,error }=await sb.from('profiles').select('*').eq('user_id',AUTH_USER.id).maybeSingle();
   if(error){ console.warn('profile load:',error); return; }
@@ -1473,7 +1604,8 @@ async function adminGate(logSignin){ const tab=$('#tabAdmin'); if(!tab) return;
   const res=await adminCall('ping', logSignin?{event:'signin'}:{});
   ADMIN_ROLE=(res&&res.role)||'member';
   const staff=['owner','admin','moderator'].includes(ADMIN_ROLE);
-  tab.hidden=!staff; if(staff){ const p=$('#adminRolePill'); if(p)p.textContent=ADMIN_ROLE; }
+  tab.hidden=!staff; const bn=$('#bnAdmin'); if(bn) bn.hidden=!staff;
+  if(staff){ const p=$('#adminRolePill'); if(p)p.textContent=ADMIN_ROLE; }
 }
 function adminStaff(){ return ['owner','admin','moderator'].includes(ADMIN_ROLE); }
 function adminRenderTab(){ const body=$('#adminBody'); if(!body) return;
