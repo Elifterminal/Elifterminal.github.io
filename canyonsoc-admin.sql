@@ -119,9 +119,11 @@ begin
   select handle into h from profiles where user_id = a;
   d := (case when tg_op = 'DELETE' then to_jsonb(old) else to_jsonb(new) end)
         - 'image_url' - 'cover_url' - 'pic_url' - 'url' - 'src';
+  -- target id: most tables key on `id`, but `profiles` keys on `user_id`.
+  -- Pull from the jsonb so an id-less table never throws "record has no field id".
   insert into audit_log(actor_id, actor_handle, action, target_type, target_id, detail)
   values (a, h, lower(tg_op) || '_' || tg_table_name, tg_table_name,
-          (case when tg_op = 'DELETE' then old.id else new.id end)::text, d);
+          coalesce(d->>'id', d->>'user_id'), d);
   return case when tg_op = 'DELETE' then old else new end;
 end; $$;
 
