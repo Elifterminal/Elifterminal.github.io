@@ -1386,7 +1386,7 @@ $('#msgImgInput').addEventListener('change',e=>{ if(!ACTIVE||!sb||!AUTH_USER){ e
 document.body.addEventListener('click',e=>{ const b=e.target.closest('.act-msg'); if(b&&!b.disabled) openDM(b.dataset.h,b.dataset.co); });
 /* realtime: live-append new messages for any thread I'm in (RLS limits delivery to my threads) */
 function setupDMRealtime(){ if(!sb||!AUTH_USER||dmChannel) return;
-  dmChannel=sb.channel('dm-'+AUTH_USER.id)
+  dmChannel=sb.channel('rt-'+AUTH_USER.id)
     .on('postgres_changes',{event:'INSERT',schema:'public',table:'messages'}, payload=>{
       const m=payload.new; const th=DM_BY_ID[m.thread_id];
       if(!th){ loadThreads(); return; }              // new/unknown thread → resync
@@ -1397,27 +1397,39 @@ function setupDMRealtime(){ if(!sb||!AUTH_USER||dmChannel) return;
       if(ACTIVE===th.id){ SEEN[th.id]=new Date().toISOString(); LS.set('canyonsoc_seen',SEEN); renderThread(th); }
       renderConvs();
       if(!mine && ACTIVE!==th.id) toast('💬 New message from @'+th.h);
+    })
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'notifications',filter:'user_id=eq.'+AUTH_USER.id}, payload=>{
+      const n=mapNotif(payload.new); if(NOTIFS.some(x=>String(x.id)===String(n.id))) return;
+      NOTIFS.unshift(n); renderNotifs(); renderNotifFull(); updateBell();
+      if(n.kind!=='message') toast(`${n.ico} <b>@${esc(n.who||'CanyonSoc')}</b> ${esc(n.text)}`);   // DMs already toast above
     }).subscribe();
 }
 function teardownDMRealtime(){ if(dmChannel){ try{ sb.removeChannel(dmChannel); }catch(e){} dmChannel=null; } }
 
 /* ================= notifications + toasts ================= */
-let NOTIFS=LS.get('canyonsoc_notifs',[]);
-const saveNotifs=()=>LS.set('canyonsoc_notifs',NOTIFS);
+/* notifications — written server-side by DB triggers, read here + pushed live */
+let NOTIFS=[];
+const NICO={react:'😊',comment:'💬',mention:'@',friend:'👥',message:'✉️',market:'🪧'};
+function mapNotif(n){ const who=(PROF_BY_ID[n.actor_id]||{}).handle||''; let body=n.text||''; if(body[0]==='@') body=body.replace(/^@\S+\s*/,'');
+  return {id:n.id, read:n.read, kind:n.kind, ref:n.ref||'home', text:body, who, ico:NICO[n.kind]||'🔔', t:rel(n.created_at)}; }
+async function loadNotifs(){ if(!sb||!AUTH_USER){ NOTIFS=[]; renderNotifs(); renderNotifFull(); updateBell(); return; }
+  const { data,error }=await sb.from('notifications').select('id,actor_id,kind,text,ref,read,created_at').eq('user_id',AUTH_USER.id).order('created_at',{ascending:false}).limit(100);
+  if(error){ console.warn('notifs load:',error); return; }
+  NOTIFS=(data||[]).map(mapNotif); renderNotifs(); renderNotifFull(); updateBell(); }
+async function markNotifRead(id){ const n=NOTIFS.find(x=>String(x.id)===String(id)); if(n&&!n.read){ n.read=true; if(sb&&AUTH_USER) await sb.from('notifications').update({read:true}).eq('id',id); } }
+async function markAllNotifs(){ const ids=NOTIFS.filter(n=>!n.read).map(n=>n.id); NOTIFS.forEach(n=>n.read=true); if(sb&&AUTH_USER&&ids.length) await sb.from('notifications').update({read:true}).in('id',ids); }
 const notifUnread=()=>NOTIFS.filter(n=>!n.read).length;
 function updateBell(){ const b=$('#nbadge'),n=notifUnread(); b.textContent=n>9?'9+':n; b.classList.toggle('show',n>0); }
 function renderNotifs(){ $('#notifList').innerHTML=NOTIFS.map(n=>`<div class="nrow ${n.read?'':'unread'}" data-id="${esc(n.id)}" data-ref="${esc(n.ref||'home')}">
    <div class="nico">${avi(n.who||'?',person(n.who||'').co,40,11)}<span class="nbubble">${esc(n.ico||'🔔')}</span></div>
    <div class="ntext"><b>@${esc(n.who||'CanyonSoc')}</b> ${esc(n.text)}</div><div class="ntime">${esc(n.t)}</div></div>`).join('')
    ||'<div class="nrow"><div></div><div class="small">No notifications yet.</div><div></div></div>'; }
-function pushNotif(o,silent){ NOTIFS.unshift({id:'n'+Date.now()+Math.round(Math.random()*1e4),read:false,t:'now',kind:'react',...o}); saveNotifs(); renderNotifs(); renderNotifFull(); updateBell();
-  if(!silent) toast(`${esc(o.ico||'🔔')} <b>@${esc(o.who||'')}</b> ${esc(o.text)}`); }
 function toast(html){ const t=document.createElement('div'); t.className='toast'; t.innerHTML=html; $('#toasts').appendChild(t);
   setTimeout(()=>{ t.style.transition='opacity .3s'; t.style.opacity='0'; setTimeout(()=>t.remove(),300); },3800); }
 $('#btnBell').onclick=e=>{ e.stopPropagation(); const p=$('#notifPanel'); if(p.classList.toggle('open')) renderNotifs(); };
-$('#notifClear').onclick=e=>{ e.stopPropagation(); NOTIFS.forEach(n=>n.read=true); saveNotifs(); renderNotifs(); updateBell(); };
+$('#notifClear').onclick=async e=>{ e.stopPropagation(); await markAllNotifs(); renderNotifs(); renderNotifFull(); updateBell(); };
 $('#notifList').addEventListener('click',e=>{ const r=e.target.closest('.nrow'); if(!r||!r.dataset.id)return;
-  const n=NOTIFS.find(x=>x.id===r.dataset.id); if(n){ n.read=true; saveNotifs(); updateBell(); }
+  markNotifRead(r.dataset.id).then(()=>{ updateBell(); renderNotifs(); renderNotifFull(); });
   $('#notifPanel').classList.remove('open'); if(r.dataset.ref) show(r.dataset.ref); });
 document.addEventListener('click',e=>{ if(!e.target.closest('#notifPanel')&&!e.target.closest('#btnBell')) $('#notifPanel').classList.remove('open'); });
 
@@ -1432,9 +1444,10 @@ function renderNotifFull(){ if(!$('#notifFilters'))return;
     <div class="nico">${avi(n.who||'?',person(n.who||'').co,40,11)}<span class="nbubble">${esc(n.ico||'🔔')}</span></div>
     <div class="ntext"><b>@${esc(n.who||'CanyonSoc')}</b> ${esc(n.text)}</div><div class="ntime">${esc(n.t)}</div></div>`).join('')||'<div class="nrow"><div></div><div class="small">Nothing here yet.</div><div></div></div>'; }
 $('#notifFilters').addEventListener('click',e=>{ const b=e.target.closest('.cat'); if(!b)return; NOTIF_FILTER=b.dataset.k; renderNotifFull(); });
-$('#notifFull').addEventListener('click',e=>{ const r=e.target.closest('.nrow'); if(!r||!r.dataset.id)return; const n=NOTIFS.find(x=>x.id===r.dataset.id);
-  if(n){ n.read=true; saveNotifs(); updateBell(); renderNotifs(); renderNotifFull(); } if(r.dataset.ref&&r.dataset.ref!=='notifications') show(r.dataset.ref); });
-$('#notifClearAll').onclick=()=>{ NOTIFS.forEach(n=>n.read=true); saveNotifs(); renderNotifs(); renderNotifFull(); updateBell(); };
+$('#notifFull').addEventListener('click',e=>{ const r=e.target.closest('.nrow'); if(!r||!r.dataset.id)return;
+  markNotifRead(r.dataset.id).then(()=>{ updateBell(); renderNotifs(); renderNotifFull(); });
+  if(r.dataset.ref&&r.dataset.ref!=='notifications') show(r.dataset.ref); });
+$('#notifClearAll').onclick=async()=>{ await markAllNotifs(); renderNotifs(); renderNotifFull(); updateBell(); };
 $('#notifSeeAll').onclick=()=>{ $('#notifPanel').classList.remove('open'); renderNotifFull(); show('notifications'); };
 
 /* ================= tabs / palette / theme ================= */
@@ -1563,7 +1576,7 @@ async function loadDirectory(){ if(!sb) return;
     if(p.user_id) byId[p.user_id]=prof;
     if(p.handle&&!RESV.includes(p.handle)) idByH[p.handle]=p.user_id;
     if(p.handle&&p.handle!==ME.handle&&!RESV.includes(p.handle)) next[p.handle]=prof; });
-  PEOPLE=next; PROF_BY_ID=byId; ID_BY_HANDLE=idByH; loadFriends(); loadThreads(); loadFeed(); loadMarket(); loadRides(); loadPhotos(); }
+  PEOPLE=next; PROF_BY_ID=byId; ID_BY_HANDLE=idByH; loadFriends(); loadThreads(); loadFeed(); loadMarket(); loadRides(); loadPhotos(); loadNotifs(); }
 async function loadProfileFromCloud(){ if(!sb||!AUTH_USER)return;
   const { data,error }=await sb.from('profiles').select('*').eq('user_id',AUTH_USER.id).maybeSingle();
   if(error){ console.warn('profile load:',error); return; }
