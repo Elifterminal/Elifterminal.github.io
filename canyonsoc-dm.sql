@@ -35,3 +35,10 @@ revoke execute on function start_dm(uuid) from anon;
 
 -- Phase 5: marketplace listings carry a price string the UI already collects.
 alter table listings add column if not exists price text;
+
+-- Let people edit their own posts (delete is already allowed by posts_delete).
+-- Ban-aware, same shape as posts_insert. Owners only; speech stays free.
+drop policy if exists posts_update on posts;
+create policy posts_update on posts for update
+  using (auth.uid() = author_id)
+  with check (auth.uid() = author_id and not public.is_banned(auth.uid()));
