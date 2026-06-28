@@ -1623,21 +1623,36 @@ async function loadAlerts(){ const el=$('#alertsList'); try{
   el.innerHTML=f.map(a=>`<div class="alert">${esc(a.properties?.event||'Alert')} — <span class="small">${esc(a.properties?.headline||'')}</span></div>`).join(''); $('#ax').textContent=f.length+' active';
   }catch(e){ el.textContent='Alerts unavailable.'; $('#ax').textContent='—'; } }
 /* Live Arizona wildfires — NIFC WFIGS current incident locations (public ArcGIS,
-   keyless + CORS). Filtered to Arizona wildfires (POOState=US-AZ, type WF), newest first. */
+   keyless + CORS). Sorted by distance from the South Rim so the CLOSEST fires show
+   first (with miles + compass direction); ≤30 mi flags red, ≤75 mi amber. */
+const RIM=[36.0544,-112.1401];
+function milesFrom(a,b){ const R=3958.8,r=Math.PI/180;
+  const la1=a[0]*r,la2=b[0]*r,dla=(b[0]-a[0])*r,dlo=(b[1]-a[1])*r;
+  const h=Math.sin(dla/2)**2+Math.cos(la1)*Math.cos(la2)*Math.sin(dlo/2)**2;
+  return 2*R*Math.asin(Math.sqrt(h)); }
+function compassTo(from,to){ const r=Math.PI/180, dLon=(to[1]-from[1])*r;
+  const y=Math.sin(dLon)*Math.cos(to[0]*r),
+    x=Math.cos(from[0]*r)*Math.sin(to[0]*r)-Math.sin(from[0]*r)*Math.cos(to[0]*r)*Math.cos(dLon);
+  return ['N','NE','E','SE','S','SW','W','NW'][Math.round(((Math.atan2(y,x)/r+360)%360)/45)%8]; }
 async function loadWildfires(){ const el=$('#wildfireFeed'); if(!el) return; try{
   const url='https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/WFIGS_Incident_Locations_Current/FeatureServer/0/query'
     +'?where='+encodeURIComponent("POOState='US-AZ' AND IncidentTypeCategory='WF'")
-    +'&outFields=*&orderByFields='+encodeURIComponent('FireDiscoveryDateTime DESC')+'&resultRecordCount=8&f=json';
-  const j=await (await fetch(url)).json(); const fs=(j.features||[]).map(f=>f.attributes);
+    +'&outFields=*&returnGeometry=true&outSR=4326&resultRecordCount=50&f=json';
+  const j=await (await fetch(url)).json();
+  let fs=(j.features||[]).map(f=>{ const a=f.attributes||{}, g=f.geometry||{};
+    const ok=(typeof g.y==='number'&&typeof g.x==='number');
+    return {a, mi:ok?milesFrom(RIM,[g.y,g.x]):null, dir:ok?compassTo(RIM,[g.y,g.x]):''}; });
   if(!fs.length){ el.innerHTML='<span style="color:var(--ok)">✓ No active wildfires reported in Arizona.</span>'; return; }
-  el.innerHTML=fs.map(a=>{
+  fs.sort((p,q)=>(p.mi==null?1e9:p.mi)-(q.mi==null?1e9:q.mi));
+  el.innerHTML=fs.slice(0,8).map(({a,mi,dir})=>{
     const nm=a.IncidentName||'Wildfire'; const label=/fire|complex/i.test(nm)?nm:nm+' Fire';
-    const ac=a.DailyAcres!=null?Math.round(a.DailyAcres).toLocaleString()+' ac':'size pending';
-    const cont=a.PercentContained!=null?a.PercentContained+'% contained':'containment pending';
-    const where=a.POOCounty?a.POOCounty+' County':'Arizona';
-    const lvl=(a.PercentContained!=null&&a.PercentContained>=70)?'info':(a.DailyAcres>=1000)?'crit':'warn';
-    return `<div class="pa ${lvl}"><div class="paico">🔥</div><div><div class="pat">${esc(label)}</div>
-      <div class="pad">${esc(where)} · ${esc(ac)} · ${esc(cont)}</div></div></div>`;
+    const dist=mi!=null?`${Math.round(mi)} mi ${dir}`:'location pending';
+    const bits=[a.POOCounty?a.POOCounty+' Co':null,
+      a.DailyAcres!=null?Math.round(a.DailyAcres).toLocaleString()+' ac':null,
+      a.PercentContained!=null?a.PercentContained+'% contained':null].filter(Boolean).join(' · ');
+    const lvl=(mi!=null&&mi<=30)?'crit':(mi!=null&&mi<=75)?'warn':'info';
+    return `<div class="pa ${lvl}"><div class="paico">🔥</div><div><div class="pat">${esc(label)} <span class="small" style="font-weight:700">· ${esc(dist)}</span></div>
+      <div class="pad">${esc(bits||'Arizona')}</div></div></div>`;
   }).join('');
   }catch(e){ el.textContent='Wildfire feed unavailable right now.'; } }
 /* Live Arizona flood & flash-flood warnings — NWS active alerts statewide (keyless +
