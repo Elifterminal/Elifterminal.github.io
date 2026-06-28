@@ -1187,7 +1187,20 @@ document.addEventListener('click',async e=>{
   if(!tid) return;
   btn.disabled=true;
   try{
-    if(a) await sb.from('friendships').insert({requester_id:myid,addressee_id:tid,status:'pending'});
+    if(a){
+      // Prevent duplicate / reverse-duplicate rows: if we're already connected or
+      // already requested, do nothing; if THEY already requested us, accept that row
+      // instead of inserting a mirror row; otherwise create the single pending row.
+      if(FRIENDS.includes(target)){ /* already friends */ }
+      else if(FRIEND_IN.includes(target))
+        await sb.from('friendships').update({status:'accepted'}).eq('requester_id',tid).eq('addressee_id',myid);
+      else if(FRIEND_OUT.includes(target)){ /* request already pending */ }
+      else {
+        const { error:insErr }=await sb.from('friendships').insert({requester_id:myid,addressee_id:tid,status:'pending'});
+        // a row for this pair already exists (race / DB pair-unique index) — accept it rather than duplicate
+        if(insErr) await sb.from('friendships').update({status:'accepted'}).eq('requester_id',tid).eq('addressee_id',myid);
+      }
+    }
     else if(ac) await sb.from('friendships').update({status:'accepted'}).eq('requester_id',tid).eq('addressee_id',myid);
     else if(dc) await sb.from('friendships').delete().eq('requester_id',tid).eq('addressee_id',myid);
     else if(u) await sb.from('friendships').delete()
