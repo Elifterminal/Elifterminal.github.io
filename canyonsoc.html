@@ -8,7 +8,7 @@
      limiting blast radius if any XSS slipped past output encoding. Inline script/style
      need 'unsafe-inline' because the whole app is one inline file; output encoding (esc/
      safePic) is the primary XSS defense, CSP is defense-in-depth. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://esm.sh; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://ajkbsexxwbqjylbepvmh.supabase.co wss://ajkbsexxwbqjylbepvmh.supabase.co https://esm.sh https://api.open-meteo.com https://api.weather.gov https://api.sunrise-sunset.org https://services3.arcgis.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://esm.sh; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://ajkbsexxwbqjylbepvmh.supabase.co wss://ajkbsexxwbqjylbepvmh.supabase.co https://esm.sh https://api.open-meteo.com https://api.weather.gov https://api.sunrise-sunset.org https://services3.arcgis.com https://inciweb.wildfire.gov; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'" />
 <meta name="referrer" content="strict-origin-when-cross-origin" />
 <!-- Clickjacking guard: meta CSP can't carry frame-ancestors, so bust out of any frame. -->
 <script>try{if(window.top!==window.self)window.top.location=window.self.location}catch(e){}</script>
@@ -1298,7 +1298,7 @@ async function loadFeed(){ if(!sb) return;
 /* ================= sidebar widgets ================= */
 function renderAlerts(){ const el=$('#parkAlerts');
   if(!PARK_ALERTS.length){ el.innerHTML='<div class="pa info"><div class="paico">🛰️</div><div><div class="pat">Live park alerts</div><div class="pad" id="paNote">Connecting to the NPS feed…</div></div></div>'; return; }
-  el.innerHTML=PARK_ALERTS.map(a=>`<div class="pa ${a.lvl}"><div class="paico">${a.ico}</div><div><div class="pat">${esc(a.t)}</div><div class="pad">${esc(a.d)}</div></div></div>`).join(''); }
+  el.innerHTML=PARK_ALERTS.map(a=>`<div class="pa ${a.lvl}"><div class="paico">${a.ico}</div><div><div class="pat">${esc(a.t)}</div><div class="pad">${esc(a.d)}${a.u?` · <a href="${esc(a.u)}" target="_blank" rel="noopener" style="color:var(--clay-bright);font-weight:700">More from NPS ↗</a>`:''}</div></div></div>`).join(''); }
 /* Live NPS alerts via the Supabase Edge Function proxy (key stays server-side).
    Maps NPS alert categories to our severity/icon. Graceful: leaves the panel's
    "connecting" note in place if the proxy isn't reachable yet. */
@@ -1310,7 +1310,7 @@ async function loadParkAlerts(){
     const j=await r.json(); const data=(j&&(j.data||j.alerts))||[];
     const ico={Danger:'⛔',Caution:'⚠️',Information:'ℹ️',Closure:'⛔','Park Closure':'⛔'};
     const lvl={Danger:'crit',Caution:'warn',Information:'info',Closure:'warn','Park Closure':'crit'};
-    PARK_ALERTS=data.map(a=>({lvl:lvl[a.category]||'info',ico:ico[a.category]||'🛰️',t:a.title||a.category||'NPS alert',d:(a.description||'').replace(/\s+/g,' ').trim()})).slice(0,6);
+    PARK_ALERTS=data.map(a=>({lvl:lvl[a.category]||'info',ico:ico[a.category]||'🛰️',t:a.title||a.category||'NPS alert',d:(a.description||'').replace(/\s+/g,' ').trim(),u:/^https?:\/\//i.test(a.url||'')?a.url:''})).slice(0,6);
     if(!PARK_ALERTS.length) PARK_ALERTS=[{lvl:'info',ico:'✓',t:'No active park alerts',d:'NPS reports no current Grand Canyon alerts.'}];
     renderAlerts();
   }catch(e){ const n=$('#paNote'); if(n) n.textContent='NPS feed unavailable right now.'; }
@@ -1634,11 +1634,29 @@ function compassTo(from,to){ const r=Math.PI/180, dLon=(to[1]-from[1])*r;
   const y=Math.sin(dLon)*Math.cos(to[0]*r),
     x=Math.cos(from[0]*r)*Math.sin(to[0]*r)-Math.sin(from[0]*r)*Math.cos(to[0]*r)*Math.cos(dLon);
   return ['N','NE','E','SE','S','SW','W','NW'][Math.round(((Math.atan2(y,x)/r+360)%360)/45)%8]; }
+/* InciWeb deep-links: the WFIGS fire data has no InciWeb id, but InciWeb's accessible
+   table is server-rendered (CORS-open) with real incident-page slugs. We parse the
+   Arizona ones (slug prefix "az…") into a name→slug map and link each fire to its own
+   InciWeb page; fires not posted to InciWeb fall back to the AZ incident list. */
+const AZ_FIRE_LIST='https://inciweb.wildfire.gov/state/arizona';
+function normFire(s){ return (''+s).toLowerCase().replace(/\b(fire|complex|rx|prescribed)\b/g,'').replace(/[^a-z0-9]+/g,''); }
+function parseInciweb(html){ const m=Object.create(null);
+  const re=/incident-information\/(az[a-z0-9]*-[a-z0-9-]+)/gi; let g;
+  while((g=re.exec(html))){ const slug=g[1].toLowerCase(); const k=normFire(slug.replace(/^[a-z0-9]+-/,''));
+    if(k&&!(k in m)) m[k]=slug; }
+  return m; }
+function inciwebUrl(name,map){ const slug=map&&map[normFire(name)];
+  return slug?('https://inciweb.wildfire.gov/incident-information/'+slug):AZ_FIRE_LIST; }
 async function loadWildfires(){ const el=$('#wildfireFeed'); if(!el) return; try{
   const url='https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/WFIGS_Incident_Locations_Current/FeatureServer/0/query'
     +'?where='+encodeURIComponent("POOState='US-AZ' AND IncidentTypeCategory='WF'")
     +'&outFields=*&returnGeometry=true&outSR=4326&resultRecordCount=50&f=json';
-  const j=await (await fetch(url)).json();
+  // fire data is required; the InciWeb map is best-effort (failure → AZ-list links)
+  const [j, iwHtml] = await Promise.all([
+    fetch(url).then(r=>r.json()),
+    fetch('https://inciweb.wildfire.gov/accessible-view').then(r=>r.text()).catch(()=>'')
+  ]);
+  const iwMap=parseInciweb(iwHtml);
   let fs=(j.features||[]).map(f=>{ const a=f.attributes||{}, g=f.geometry||{};
     const ok=(typeof g.y==='number'&&typeof g.x==='number');
     return {a, mi:ok?milesFrom(RIM,[g.y,g.x]):null, dir:ok?compassTo(RIM,[g.y,g.x]):''}; });
@@ -1651,8 +1669,9 @@ async function loadWildfires(){ const el=$('#wildfireFeed'); if(!el) return; try
       a.DailyAcres!=null?Math.round(a.DailyAcres).toLocaleString()+' ac':null,
       a.PercentContained!=null?a.PercentContained+'% contained':null].filter(Boolean).join(' · ');
     const lvl=(mi!=null&&mi<=30)?'crit':(mi!=null&&mi<=75)?'warn':'info';
+    const link=inciwebUrl(nm,iwMap);
     return `<div class="pa ${lvl}"><div class="paico">🔥</div><div><div class="pat">${esc(label)} <span class="small" style="font-weight:700">· ${esc(dist)}</span></div>
-      <div class="pad">${esc(bits||'Arizona')}</div></div></div>`;
+      <div class="pad">${esc(bits||'Arizona')} · <a href="${esc(link)}" target="_blank" rel="noopener" style="color:var(--clay-bright);font-weight:700">InciWeb ↗</a></div></div></div>`;
   }).join('');
   }catch(e){ el.textContent='Wildfire feed unavailable right now.'; } }
 /* Live Arizona flood & flash-flood warnings — NWS active alerts statewide (keyless +
