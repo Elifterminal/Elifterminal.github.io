@@ -1130,6 +1130,11 @@ async function loadFriends(){
       if(f.status==='accepted') FRIENDS.push(h);
       else if(f.status==='pending'){ (f.addressee_id===myid?FRIEND_IN:FRIEND_OUT).push(h); }
     });
+    // a pair can have rows in BOTH directions (A→B and B→A), which would list the
+    // same person twice — dedupe by handle, and never show an accepted friend as pending.
+    FRIENDS=[...new Set(FRIENDS)];
+    FRIEND_IN=[...new Set(FRIEND_IN)].filter(h=>!FRIENDS.includes(h));
+    FRIEND_OUT=[...new Set(FRIEND_OUT)].filter(h=>!FRIENDS.includes(h)&&!FRIEND_IN.includes(h));
   }
   renderFriends(); renderMe();
 }
