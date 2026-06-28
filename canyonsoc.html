@@ -8,7 +8,7 @@
      limiting blast radius if any XSS slipped past output encoding. Inline script/style
      need 'unsafe-inline' because the whole app is one inline file; output encoding (esc/
      safePic) is the primary XSS defense, CSP is defense-in-depth. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://esm.sh; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://ajkbsexxwbqjylbepvmh.supabase.co wss://ajkbsexxwbqjylbepvmh.supabase.co https://esm.sh https://api.open-meteo.com https://api.weather.gov https://api.sunrise-sunset.org; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://esm.sh; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://ajkbsexxwbqjylbepvmh.supabase.co wss://ajkbsexxwbqjylbepvmh.supabase.co https://esm.sh https://api.open-meteo.com https://api.weather.gov https://api.sunrise-sunset.org https://services3.arcgis.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'" />
 <meta name="referrer" content="strict-origin-when-cross-origin" />
 <!-- Clickjacking guard: meta CSP can't carry frame-ancestors, so bust out of any frame. -->
 <script>try{if(window.top!==window.self)window.top.location=window.self.location}catch(e){}</script>
@@ -247,6 +247,16 @@ body{margin:0; color:var(--fg); overflow-x:hidden; background:var(--bg);
 .pkcard h4{margin:0 0 3px; font-size:15px}
 .pkcard .pkmeta{font-size:12px; color:var(--muted); margin-bottom:6px}
 
+/* friends at-a-glance (MySpace "top friends" style grid) */
+.fgrid{display:grid; grid-template-columns:repeat(3,1fr); gap:12px 10px}
+.ftile{display:flex; flex-direction:column; align-items:center; gap:6px; min-width:0; text-align:center}
+.ftile .avi{width:54px; height:54px; cursor:pointer; transition:.15s}
+.ftile .avi:hover{transform:translateY(-2px)}
+.ftile .fn{font-size:11.5px; font-weight:800; line-height:1.18; max-width:100%; overflow:hidden;
+  text-overflow:ellipsis; white-space:nowrap; cursor:pointer}
+.ftile .fn:hover{color:var(--accent1)}
+.fmore{display:flex; align-items:center; justify-content:center}
+
 /* messages */
 .msgwrap{display:grid; grid-template-columns:300px 1fr; min-height:560px}
 @media(max-width:760px){ .msgwrap{grid-template-columns:1fr} .msgwrap.thread-open .convlist{display:none} .msgwrap:not(.thread-open) .thread{display:none} }
@@ -483,10 +493,27 @@ footer b{color:var(--fg)}
           <button class="btn sm" style="margin-top:12px; width:100%" data-goto="profile">Open your profile →</button>
         </div>
       </aside>
+      <!-- Friends at a glance (tap a face or name → their profile) -->
+      <aside class="panel">
+        <header><span class="badge"><span class="spark"></span> 👥 FRIENDS</span> Your canyon circle <span class="small" id="homeFriendCount"></span></header>
+        <div class="body"><div class="fgrid" id="homeFriends"></div></div>
+      </aside>
       <!-- Pinned NPS park alerts -->
       <aside class="panel">
         <header><span class="badge"><span class="spark"></span> 📌 PINNED</span> Park alerts <span class="demo-pill">NPS feed</span></header>
         <div class="body" id="parkAlerts"></div>
+      </aside>
+      <!-- Live Arizona hazards — wildfires (NIFC) + flood/flash-flood warnings (NWS) -->
+      <aside class="panel">
+        <header><span class="badge"><span class="spark"></span> 🔥 ARIZONA</span> Fire &amp; flood <span class="demo-pill">live</span></header>
+        <div class="widget">
+          <div class="wtitle">Active wildfires <span class="small">NIFC · live</span></div>
+          <div id="wildfireFeed" class="small">Loading wildfires…</div>
+        </div>
+        <div class="widget">
+          <div class="wtitle">Flood &amp; flash-flood <span class="small">NWS · live</span></div>
+          <div id="floodFeed" class="small">Loading flood watch…</div>
+        </div>
       </aside>
       <!-- Tonight's Sky — live astronomy -->
       <aside class="panel">
@@ -585,9 +612,9 @@ footer b{color:var(--fg)}
       </div>
     </article>
     <article class="panel reveal">
-      <header><span class="badge"><span class="spark"></span> SHUTTLES</span> Employer shuttles <span class="demo-pill">schedules pending</span></header>
+      <header><span class="badge"><span class="spark"></span> SHUTTLES</span> Employer shuttles</header>
       <div class="body">
-        <p class="small" style="margin-top:0">DNC &amp; Xanterra staff shuttle times will drop in here once Lee sends them — housing ↔ work locations.</p>
+        <p class="small" style="margin-top:0">Published staff shuttle schedules (housing ↔ work locations) appear here.</p>
         <div id="empShuttle"></div>
       </div>
     </article>
@@ -678,7 +705,7 @@ footer b{color:var(--fg)}
         <header><span class="badge"><span class="spark"></span> EDIT</span> Profile details</header>
         <div class="body">
           <div class="grid2">
-            <div class="field"><label>Display name</label><input id="pfName" placeholder="e.g. Mara K." /></div>
+            <div class="field"><label>Display name</label><input id="pfName" placeholder="Your name" /></div>
             <div class="field"><label>Handle</label><input id="pfHandle" placeholder="yourhandle" /></div>
           </div>
           <div class="grid2">
@@ -966,10 +993,7 @@ function busSeasonNote(d){
   return 'Showing the spring/fall schedule: Tusayan (Purple) is summer-only and hours differ from the summer table — confirm at ';
 }
 let PARK_BUSES=buildParkBuses(new Date());
-const EMP_SHUTTLE=[
- {w:"DNC — Route A",what:"Staff housing ↔ Yavapai / Market Plaza",by:"schedule pending"},
- {w:"Xanterra — Route 1",what:"Dorms ↔ historic lodges (El Tovar, Bright Angel)",by:"schedule pending"},
-];
+const EMP_SHUTTLE=[];   // only real, published employer shuttle schedules — no placeholders
 /* Real Groome Transportation schedule (groometransportation.com/grand-canyon).
    Grand Canyon = Tusayan IMAX stop. Flagstaff "airport" = Pulliam Airport (FLG);
    the run also stops at the Amtrak depot/Groome office a few min later.
@@ -1112,6 +1136,24 @@ async function loadFriends(){
 function frow(h,btns){ const p=person(h); return `<div class="frow">${aviProf(h,p.co,46,12)}
   <div class="tapprof" data-prof="${esc(h)}" style="min-width:0"><div style="font-weight:800">${esc(p.name)} <span class="small">@${esc(h)}</span></div><div class="small">${esc(p.co)}${p.job?' · '+esc(p.job):''}</div></div>
   <div style="display:flex; gap:6px">${btns}</div></div>`; }
+/* Home "at a glance" friends grid — faces + names, tap either to open the profile.
+   Mirrors the full list on the Profile tab; shows the first 9 with a "+N more". */
+function renderHomeFriends(){
+  const el=$('#homeFriends'); if(!el) return;
+  const cnt=$('#homeFriendCount'); if(cnt) cnt.textContent=FRIENDS.length?('· '+FRIENDS.length):'';
+  if(!FRIENDS.length){
+    el.innerHTML='<div class="small" style="grid-column:1/-1">'+(sb&&AUTH_USER
+      ? 'No friends yet — <a class="mention" data-goto="profile">find people →</a>'
+      : 'Sign in to see your canyon circle.')+'</div>';
+    return;
+  }
+  const show=FRIENDS.slice(0,9);
+  let html=show.map(h=>{ const p=person(h);
+    return `<div class="ftile">${aviProf(h,p.co,54,14)}<div class="fn tapprof" data-prof="${esc(h)}">${esc(p.name||('@'+h))}</div></div>`;
+  }).join('');
+  if(FRIENDS.length>9) html+=`<div class="ftile fmore"><button class="btn ghost sm" data-goto="profile">+${FRIENDS.length-9} more</button></div>`;
+  el.innerHTML=html;
+}
 function renderFriends(){
   $('#friendCount').textContent=FRIENDS.length;
   $('#friendList').innerHTML=FRIENDS.map(h=>frow(h,
@@ -1129,6 +1171,7 @@ function renderFriends(){
     : `<button class="btn primary sm addfriend" data-h="${esc(h)}">+ Add</button>`
   )).join('')||'<div class="small">That is everyone around for now. 🙂</div>';
   $('#suggestions').innerHTML=html;
+  renderHomeFriends();
 }
 document.addEventListener('click',async e=>{
   const a=e.target.closest('.addfriend'), u=e.target.closest('.unfriend'),
@@ -1319,7 +1362,8 @@ function renderBuses(){ $('#parkBuses').innerHTML=PARK_BUSES.map(b=>`<div class=
   if($('#busSeasonNote')) $('#busSeasonNote').innerHTML=busSeasonNote(new Date());
   if($('#kvBuses')) $('#kvBuses').textContent=running===PARK_BUSES.length?running+' routes':running+' of '+PARK_BUSES.length+' running';
   $('#empShuttle').innerHTML=EMP_SHUTTLE.map(s=>`<div class="routebar"><span class="dotc" style="background:var(--clay);color:var(--clay)"></span>
-    <span class="rn">${s.w}</span><span class="rt small">${s.what}</span><span class="tag">${s.by}</span></div>`).join('');
+    <span class="rn">${esc(s.w)}</span><span class="rt small">${esc(s.what)}</span><span class="tag">${esc(s.by)}</span></div>`).join('')
+    ||'<div class="small">No employer shuttle schedules published yet.</div>';
   const row=a=>a.map(t=>`<div class="t"><span>depart <b>${t[0]}</b></span><span>arrive <b>${t[1]}</b></span></div>`).join('');
   $('#gToFlag').innerHTML=row(GROOME_TOFLAG); $('#gToGC').innerHTML=row(GROOME_TOGC); }
 function renderRides(){ $('#rides').innerHTML=RIDES.map(r=>`<div class="ride"><div class="when"><b>${esc(r.to)}</b><span>${esc(r.when)}</span></div>
@@ -1578,6 +1622,37 @@ async function loadAlerts(){ const el=$('#alertsList'); try{
   if(!f.length){ el.innerHTML='<span style="color:var(--ok)">✓ No active alerts.</span>'; $('#ax').textContent='none'; return; }
   el.innerHTML=f.map(a=>`<div class="alert">${esc(a.properties?.event||'Alert')} — <span class="small">${esc(a.properties?.headline||'')}</span></div>`).join(''); $('#ax').textContent=f.length+' active';
   }catch(e){ el.textContent='Alerts unavailable.'; $('#ax').textContent='—'; } }
+/* Live Arizona wildfires — NIFC WFIGS current incident locations (public ArcGIS,
+   keyless + CORS). Filtered to Arizona wildfires (POOState=US-AZ, type WF), newest first. */
+async function loadWildfires(){ const el=$('#wildfireFeed'); if(!el) return; try{
+  const url='https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/WFIGS_Incident_Locations_Current/FeatureServer/0/query'
+    +'?where='+encodeURIComponent("POOState='US-AZ' AND IncidentTypeCategory='WF'")
+    +'&outFields=*&orderByFields='+encodeURIComponent('FireDiscoveryDateTime DESC')+'&resultRecordCount=8&f=json';
+  const j=await (await fetch(url)).json(); const fs=(j.features||[]).map(f=>f.attributes);
+  if(!fs.length){ el.innerHTML='<span style="color:var(--ok)">✓ No active wildfires reported in Arizona.</span>'; return; }
+  el.innerHTML=fs.map(a=>{
+    const nm=a.IncidentName||'Wildfire'; const label=/fire|complex/i.test(nm)?nm:nm+' Fire';
+    const ac=a.DailyAcres!=null?Math.round(a.DailyAcres).toLocaleString()+' ac':'size pending';
+    const cont=a.PercentContained!=null?a.PercentContained+'% contained':'containment pending';
+    const where=a.POOCounty?a.POOCounty+' County':'Arizona';
+    const lvl=(a.PercentContained!=null&&a.PercentContained>=70)?'info':(a.DailyAcres>=1000)?'crit':'warn';
+    return `<div class="pa ${lvl}"><div class="paico">🔥</div><div><div class="pat">${esc(label)}</div>
+      <div class="pad">${esc(where)} · ${esc(ac)} · ${esc(cont)}</div></div></div>`;
+  }).join('');
+  }catch(e){ el.textContent='Wildfire feed unavailable right now.'; } }
+/* Live Arizona flood & flash-flood warnings — NWS active alerts statewide (keyless +
+   CORS), filtered to flood-type events. Most relevant in monsoon season (Jun–Sep). */
+async function loadFloods(){ const el=$('#floodFeed'); if(!el) return; try{
+  const j=await (await fetch('https://api.weather.gov/alerts/active?area=AZ',{headers:{'Accept':'application/geo+json'}})).json();
+  const f=(j.features||[]).map(x=>x.properties).filter(p=>/flood/i.test(p.event||''));
+  if(!f.length){ el.innerHTML='<span style="color:var(--ok)">✓ No active flood or flash-flood warnings in Arizona.</span>'; return; }
+  el.innerHTML=f.slice(0,6).map(p=>{ const ev=p.event||'Flood alert';
+    const lvl=/warning/i.test(ev)?'crit':/watch/i.test(ev)?'warn':'info';
+    const where=(p.areaDesc||'Arizona').split(';').slice(0,2).map(s=>s.trim()).join(', ');
+    return `<div class="pa ${lvl}"><div class="paico">🌊</div><div><div class="pat">${esc(ev)}</div>
+      <div class="pad">${esc(where)}</div></div></div>`;
+  }).join('');
+  }catch(e){ el.textContent='Flood feed unavailable right now.'; } }
 
 /* ================= @mentions + global search ================= */
 function linkify(text){ return esc(text).replace(/@(\w{2,30})/g,(_,h)=>`<a class="mention" data-h="${h}">@${h}</a>`); }
@@ -1838,10 +1913,11 @@ document.addEventListener('click',async e=>{
 /* ================= boot ================= */
 initProfileForm(); renderMe(); renderFeed(); renderAlerts(); renderBuses(); renderRides();
 renderNewTags(); renderMarket(); renderPhotos(); renderParks(); renderFriends(); renderConvs(); updateDM();
-renderNotifs(); renderNotifFull(); updateBell();
+renderNotifs(); renderNotifFull(); updateBell(); renderHomeFriends();
 $$('.reveal').forEach(el=>requestAnimationFrame(()=>el.classList.add('in')));
-loadWeather(); loadAlerts(); loadSky(); loadParkAlerts(); initSupabase();
+loadWeather(); loadAlerts(); loadSky(); loadParkAlerts(); loadWildfires(); loadFloods(); initSupabase();
 setInterval(loadWeather,600000); setInterval(loadAlerts,900000); setInterval(loadSky,3600000); setInterval(loadParkAlerts,1800000);
+setInterval(loadWildfires,300000); setInterval(loadFloods,180000);
 </script>
 </body>
 </html>
