@@ -993,7 +993,44 @@ function busSeasonNote(d){
   return 'Showing the spring/fall schedule: Tusayan (Purple) is summer-only and hours differ from the summer table — confirm at ';
 }
 let PARK_BUSES=buildParkBuses(new Date());
-const EMP_SHUTTLE=[];   // only real, published employer shuttle schedules — no placeholders
+/* Delaware North (DNC) staff shuttle — real posted flyer schedule (provided 2026-07-03).
+   ~30-min housing↔work loop. Clock times are computed live in Arizona time (America/Phoenix,
+   no DST) from the posted loop + service windows + driver breaks — no invented times. */
+const DNC={
+  operator:'Delaware North (DNC)',
+  stops:[  // minutes after each loop's CVM Deli departure
+    {n:'CVM Deli',dep:0},{n:'Boulder West Parking',dep:6},{n:'Hualapai Apartments',dep:8},
+    {n:'Mohave Apartments',dep:11},{n:'Rec Center',dep:13},{n:'Trailer Village T Street',dep:23},
+    {n:'Brandt Hall Bus Stop',dep:26}],
+  windows:[{first:4*60+50,last:12*60+50},{first:15*60+50,last:23*60+50}], // CVM Deli departures
+  breaks:[{s:10*60,e:10*60+30},{s:18*60+45,e:19*60+15}] };
+function dncAzMin(){ const p=new Intl.DateTimeFormat('en-US',{timeZone:'America/Phoenix',hour12:false,hour:'2-digit',minute:'2-digit'}).formatToParts(new Date());
+  let h=+p.find(x=>x.type==='hour').value,m=+p.find(x=>x.type==='minute').value; if(h===24)h=0; return h*60+m; }
+function dncFmt(min){ min=((Math.round(min)%1440)+1440)%1440; const h=min/60|0,m=min%60,ap=h<12?'AM':'PM',hh=h%12||12; return hh+':'+String(m).padStart(2,'0')+' '+ap; }
+function dncBreak(t){ return DNC.breaks.some(b=>t>=b.s&&t<b.e); }
+function dncCvmDeps(){ const o=[]; for(const w of DNC.windows) for(let t=w.first;t<=w.last;t+=30) o.push(t); return o; }
+function dncNext(depOff,now,k){ const o=[]; for(const t of dncCvmDeps()){ const dt=t+depOff; if(dt>=now&&!dncBreak(dt)){ o.push(dncFmt(dt)); if(o.length>=k)break; } } return o; }
+function dncStatus(now){ for(const b of DNC.breaks) if(now>=b.s&&now<b.e) return {s:'break',until:b.e};
+  for(const w of DNC.windows) if(now>=w.first&&now<=w.last+26) return {s:'run'};
+  let nx=null; for(const w of DNC.windows) if(w.first>now){nx=w.first;break;} if(nx===null)nx=DNC.windows[0].first; return {s:'off',until:nx}; }
+function renderEmpShuttle(){ const el=$('#empShuttle'); if(!el) return; const now=dncAzMin(), st=dncStatus(now);
+  const pill = st.s==='run' ? '<strong style="color:var(--ok)">Running now</strong>'
+    : st.s==='break' ? '<strong style="color:var(--warn)">On driver break · resumes '+dncFmt(st.until)+'</strong>'
+    : '<strong style="color:var(--warn)">Off-service · resumes '+dncFmt(st.until)+'</strong>';
+  let rows;
+  const rowStyle='display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px dashed var(--border);font-variant-numeric:tabular-nums';
+  if(st.s==='run'){ rows=DNC.stops.map(s=>{ const nx=dncNext(s.dep,now,2);
+      return '<div class="t" style="'+rowStyle+'"><span>'+esc(s.n)+'</span><span>'+(nx.length?('next <b>'+nx[0]+'</b>'+(nx[1]?' · '+nx[1]:'')):'—')+'</span></div>'; }).join(''); }
+  else{ rows='<div class="small" style="opacity:.85; padding:4px 0">Live departure times return when service resumes at <b>'+dncFmt(st.until)+'</b>.</div>'; }
+  el.innerHTML='<div class="routebar"><span class="dotc" style="background:var(--clay);color:var(--clay)"></span>'
+    +'<span class="rn">'+esc(DNC.operator)+'</span><span class="rt small">Staff housing ↔ work · ~30-min loop</span>'
+    +'<span class="tag">posted schedule</span>'+pill+'</div>'
+    +'<div class="small" style="margin:8px 0 2px"><b>Route:</b> '+DNC.stops.map(s=>esc(s.n)).join(' → ')+' → loop</div>'
+    +'<div class="small" style="margin:2px 0"><b>Service:</b> Mornings 4:50 AM–12:50 PM · Evenings 3:50 PM–11:50 PM</div>'
+    +'<div class="small" style="margin:2px 0 8px"><b>No service (driver breaks):</b> 10:00–10:30 AM · 6:45–7:15 PM</div>'
+    +rows
+    +'<div class="small" style="opacity:.65; margin-top:8px">Estimated departure times (Arizona time), computed from the posted DNC loop schedule.</div>'; }
+setInterval(()=>{ if(document.getElementById('empShuttle')) renderEmpShuttle(); },30000);
 /* Real Groome Transportation schedule (groometransportation.com/grand-canyon).
    Grand Canyon = Tusayan IMAX stop. Flagstaff "airport" = Pulliam Airport (FLG);
    the run also stops at the Amtrak depot/Groome office a few min later.
@@ -1379,9 +1416,7 @@ function renderBuses(){ $('#parkBuses').innerHTML=PARK_BUSES.map(b=>`<div class=
   const running=PARK_BUSES.filter(b=>b.st==='Running').length;
   if($('#busSeasonNote')) $('#busSeasonNote').innerHTML=busSeasonNote(new Date());
   if($('#kvBuses')) $('#kvBuses').textContent=running===PARK_BUSES.length?running+' routes':running+' of '+PARK_BUSES.length+' running';
-  $('#empShuttle').innerHTML=EMP_SHUTTLE.map(s=>`<div class="routebar"><span class="dotc" style="background:var(--clay);color:var(--clay)"></span>
-    <span class="rn">${esc(s.w)}</span><span class="rt small">${esc(s.what)}</span><span class="tag">${esc(s.by)}</span></div>`).join('')
-    ||'<div class="small">No employer shuttle schedules published yet.</div>';
+  renderEmpShuttle();
   const row=a=>a.map(t=>`<div class="t"><span>depart <b>${t[0]}</b></span><span>arrive <b>${t[1]}</b></span></div>`).join('');
   $('#gToFlag').innerHTML=row(GROOME_TOFLAG); $('#gToGC').innerHTML=row(GROOME_TOGC); }
 function renderRides(){ $('#rides').innerHTML=RIDES.map(r=>`<div class="ride"><div class="when"><b>${esc(r.to)}</b><span>${esc(r.when)}</span></div>
