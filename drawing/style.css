@@ -1,0 +1,158 @@
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background-color: #000;
+    color: #fff;
+    font-family: system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+}
+
+#canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+#start-button {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: 20px;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    animation: pulse 2s ease-in-out infinite;
+    transition: opacity 0.4s ease;
+}
+
+#start-button svg {
+    width: 44px;
+    height: 44px;
+}
+
+#start-button.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 0.65; }
+    50% { opacity: 1; }
+}
+
+#hud {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    padding: 18px 20px;
+    display: none;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 16px;
+    pointer-events: none;
+    text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9);
+}
+
+#title {
+    font-size: 14px;
+    letter-spacing: 0.06em;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+#status {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.55);
+}
+
+#progress {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.1);
+    display: none;
+}
+
+#progress-bar {
+    height: 100%;
+    width: 0;
+    background: linear-gradient(90deg, #ff4d4d, #ffb03a);
+    transition: width 0.2s linear;
+}
+
+#controls {
+    position: absolute;
+    bottom: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: none;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.stage.running #hud,
+.stage.running #controls {
+    display: flex;
+}
+
+.stage.running #progress {
+    display: block;
+}
+
+.control-button {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 4px;
+    color: #fff;
+    padding: 7px 14px;
+    font-size: 13px;
+    cursor: pointer;
+    backdrop-filter: blur(6px);
+    transition: background 0.2s, border-color 0.2s, opacity 0.2s;
+}
+
+.control-button:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.18);
+    border-color: rgba(255, 255, 255, 0.45);
+}
+
+.control-button:disabled {
+    opacity: 0.35;
+    cursor: default;
+}
+
+#drop-hint {
+    position: absolute;
+    inset: 24px;
+    border: 2px dashed rgba(255, 255, 255, 0.35);
+    border-radius: 10px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    color: rgba(255, 255, 255, 0.75);
+    background: rgba(0, 0, 0, 0.45);
+    pointer-events: none;
+}
+
+#drop-hint.visible {
+    display: flex;
+}
+
+#file-input {
+    display: none;
+}
