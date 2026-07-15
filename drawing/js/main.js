@@ -3,7 +3,9 @@
 import { ANIMATION } from './config.js';
 import { createRenderer } from './renderer.js';
 import { createAnimator } from './animator.js';
-import { createPlaylist, loadManifest } from './playlist.js';
+import { createPlaylist, loadManifest, storedToItem } from './playlist.js';
+import { createStrip } from './strip.js';
+import { addImages, listImages, deleteImage, clearImages } from './store.js';
 import { planDrawing } from './planner.js';
 
 const canvas = document.getElementById('canvas');
@@ -14,6 +16,7 @@ const titleText = document.getElementById('title');
 const progressBar = document.getElementById('progress-bar');
 const dropHint = document.getElementById('drop-hint');
 const fileInput = document.getElementById('file-input');
+const stripEl = document.getElementById('strip');
 
 const pauseButton = document.getElementById('pause-button');
 const skipButton = document.getElementById('skip-button');
@@ -22,10 +25,12 @@ const nextButton = document.getElementById('next-button');
 const prevButton = document.getElementById('prev-button');
 const saveButton = document.getElementById('save-button');
 const openButton = document.getElementById('open-button');
+const clearButton = document.getElementById('clear-button');
 
 const renderer = createRenderer(canvas);
 
 let playlist = createPlaylist([]);
+let manifestItems = [];
 let speedIndex = ANIMATION.defaultSpeedIndex;
 let holdTimer = null;
 let busy = false;
@@ -43,8 +48,18 @@ const animator = createAnimator({
     },
 });
 
+const strip = createStrip(stripEl, {
+    onSelect: (index) => draw(playlist.jumpTo(index)),
+    onRemove: (item) => removeUpload(item),
+});
+
 function setStatus(message) {
     statusText.textContent = message;
+}
+
+function refreshStrip() {
+    strip.render(playlist.all(), playlist.indexOfCurrent());
+    clearButton.disabled = !playlist.all().some((item) => item.storedId !== undefined);
 }
 
 function fitCanvas() {
@@ -78,6 +93,7 @@ async function draw(item) {
     pauseButton.textContent = 'Pause';
     progressBar.style.width = '0%';
     titleText.textContent = `${item.title}  ·  ${playlist.position()}/${playlist.size()}`;
+    refreshStrip();
 
     try {
         setStatus('Loading…');
@@ -106,17 +122,84 @@ async function draw(item) {
     }
 }
 
+async function addFiles(files) {
+    const images = [...files].filter((file) => file.type.startsWith('image/'));
+    if (images.length === 0) {
+        setStatus('That was not an image');
+        return;
+    }
+
+    setStatus(`Storing ${images.length} image${images.length > 1 ? 's' : ''}…`);
+
+    let items;
+    try {
+        const saved = await addImages(images);
+        items = saved.map(storedToItem);
+    } catch (error) {
+        // Private mode and a full quota both land here. Still worth drawing them
+        // this session, they just will not survive a refresh.
+        console.warn('Could not persist uploads:', error.message);
+        setStatus('Added for this session only — storage unavailable');
+        items = images.map((file) => ({ title: file.name, blob: file }));
+    }
+
+    const first = playlist.insert(items);
+    refreshStrip();
+    draw(first);
+}
+
+async function removeUpload(item) {
+    const wasCurrent = playlist.remove(item);
+
+    if (item.storedId !== undefined) {
+        try {
+            await deleteImage(item.storedId);
+        } catch (error) {
+            console.warn('Could not delete stored image:', error.message);
+        }
+    }
+
+    refreshStrip();
+    if (playlist.size() === 0) {
+        setStatus('Queue empty — drop an image to draw it');
+        return;
+    }
+    if (wasCurrent) draw(playlist.current());
+}
+
+async function clearUploads() {
+    cancelHold();
+    try {
+        await clearImages();
+    } catch (error) {
+        console.warn('Could not clear storage:', error.message);
+    }
+
+    playlist.replaceAll(manifestItems);
+    refreshStrip();
+    setStatus('Uploads cleared');
+    if (playlist.size() > 0) draw(playlist.current());
+}
+
 async function begin() {
     stage.classList.add('running');
     startButton.classList.add('hidden');
 
     setStatus('Loading playlist…');
-    const entries = await loadManifest();
-    playlist = createPlaylist(entries);
+    manifestItems = await loadManifest();
+
+    let stored = [];
+    try {
+        stored = (await listImages()).map(storedToItem);
+    } catch (error) {
+        console.warn('Stored uploads unavailable:', error.message);
+    }
+
+    playlist = createPlaylist([...manifestItems, ...stored]);
+    refreshStrip();
 
     if (playlist.size() === 0) {
-        setStatus('No playlist found — drop an image anywhere on the page');
-        dropHint.classList.add('visible');
+        setStatus('Drop images anywhere, or use Open…');
         return;
     }
 
@@ -150,6 +233,7 @@ speedButton.addEventListener('click', () => {
 
 nextButton.addEventListener('click', () => draw(playlist.next()));
 prevButton.addEventListener('click', () => draw(playlist.previous()));
+clearButton.addEventListener('click', clearUploads);
 
 saveButton.addEventListener('click', () => {
     const data = renderer.toJPEG();
@@ -164,11 +248,7 @@ saveButton.addEventListener('click', () => {
 openButton.addEventListener('click', () => fileInput.click());
 
 fileInput.addEventListener('change', (event) => {
-    const item = playlist.addFiles(event.target.files);
-    if (item) {
-        dropHint.classList.remove('visible');
-        draw(item);
-    }
+    addFiles(event.target.files);
     fileInput.value = '';
 });
 
@@ -187,16 +267,12 @@ window.addEventListener('drop', (event) => {
     event.preventDefault();
     dropHint.classList.remove('visible');
 
-    const item = playlist.addFiles(event.dataTransfer.files);
-    if (item) {
-        if (!stage.classList.contains('running')) {
-            stage.classList.add('running');
-            startButton.classList.add('hidden');
-        }
-        draw(item);
-    } else {
-        setStatus('That was not an image');
+    // Dropping before pressing the button should just work.
+    if (!stage.classList.contains('running')) {
+        stage.classList.add('running');
+        startButton.classList.add('hidden');
     }
+    addFiles(event.dataTransfer.files);
 });
 
 window.addEventListener('keydown', (event) => {

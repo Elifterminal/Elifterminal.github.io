@@ -21,12 +21,14 @@ export function loadImage(src) {
     });
 }
 
-export function fileToImage(file) {
-    if (!file.type.startsWith('image/')) {
-        return Promise.reject(new Error(`Not an image: ${file.name || 'dropped file'}`));
+// Takes a File from a drop, or a bare Blob rehydrated out of storage — a Blob
+// carries a type but no name, so don't reach for one.
+export function fileToImage(blob) {
+    if (!blob || !String(blob.type).startsWith('image/')) {
+        return Promise.reject(new Error(`Not an image: ${blob?.name || 'file'}`));
     }
 
-    const url = URL.createObjectURL(file);
+    const url = URL.createObjectURL(blob);
     return loadImage(url).finally(() => URL.revokeObjectURL(url));
 }
 

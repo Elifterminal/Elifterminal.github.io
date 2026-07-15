@@ -95,7 +95,9 @@ export const RENDER = Object.freeze({
 });
 
 export const ANIMATION = Object.freeze({
-    pixelsPerSecond: 1400,
+    // 70% slower than it used to run. ~6.5 min for a typical image at 1x; the
+    // speed buttons still go 0.25x to 8x from here.
+    pixelsPerSecond: 420,
     speeds: Object.freeze([0.25, 0.5, 1, 2, 4, 8]),
     defaultSpeedIndex: 2,
     holdAfterCompleteMs: 4000,
