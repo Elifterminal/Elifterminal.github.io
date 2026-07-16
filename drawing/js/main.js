@@ -1,12 +1,12 @@
 // Wiring: playlist -> planner -> animator -> renderer, plus the controls.
 
-import { ANIMATION } from './config.js?v=2';
-import { createRenderer } from './renderer.js?v=2';
-import { createAnimator } from './animator.js?v=2';
-import { createPlaylist, loadManifest, storedToItem } from './playlist.js?v=2';
-import { createStrip } from './strip.js?v=2';
-import { addImages, listImages, deleteImage, clearImages } from './store.js?v=2';
-import { planDrawing } from './planner.js?v=2';
+import { ANIMATION } from './config.js?v=3';
+import { createRenderer } from './renderer.js?v=3';
+import { createAnimator } from './animator.js?v=3';
+import { createPlaylist, loadManifest, storedToItem } from './playlist.js?v=3';
+import { createStrip } from './strip.js?v=3';
+import { addImages, listImages, deleteImage, clearImages } from './store.js?v=3';
+import { planDrawing } from './planner.js?v=3';
 
 const canvas = document.getElementById('canvas');
 const startButton = document.getElementById('start-button');
@@ -25,6 +25,27 @@ const nextButton = document.getElementById('next-button');
 const prevButton = document.getElementById('prev-button');
 const saveButton = document.getElementById('save-button');
 const clearButton = document.getElementById('clear-button');
+const hideButton = document.getElementById('hide-button');
+
+// Set once the examples have been cleared. Without remembering, a reload would
+// helpfully hand them back to someone who just threw them away.
+const EXAMPLES_DISMISSED = 'drawn:examples-dismissed';
+
+function examplesDismissed() {
+    try {
+        return localStorage.getItem(EXAMPLES_DISMISSED) === '1';
+    } catch (error) {
+        return false; // private mode; examples just come back next visit
+    }
+}
+
+function rememberExamplesDismissed() {
+    try {
+        localStorage.setItem(EXAMPLES_DISMISSED, '1');
+    } catch (error) {
+        console.warn('Could not persist the cleared state:', error.message);
+    }
+}
 
 const renderer = createRenderer(canvas);
 
@@ -60,7 +81,8 @@ function setStatus(message) {
 
 function refreshStrip() {
     strip.render(playlist.all(), playlist.indexOfCurrent());
-    clearButton.disabled = !playlist.all().some((item) => item.storedId !== undefined);
+    clearButton.disabled = playlist.size() === 0;
+    stage.classList.toggle('empty', playlist.size() === 0);
 }
 
 function fitCanvas() {
@@ -169,26 +191,39 @@ async function removeUpload(item) {
     if (wasCurrent) draw(playlist.current());
 }
 
-async function clearUploads() {
+// Wipes the queue down to nothing: uploads out of storage, examples dismissed
+// for good. The point is a blank slate for your own pictures.
+async function clearAll() {
     cancelHold();
+    animator.stop();
+    drawToken++; // abandon anything mid-analysis
+
     try {
         await clearImages();
     } catch (error) {
         console.warn('Could not clear storage:', error.message);
     }
 
-    playlist.replaceAll(manifestItems);
+    rememberExamplesDismissed();
+    manifestItems = [];
+    playlist.replaceAll([]);
+
+    renderer.clear();
+    renderer.present(null);
+    titleText.textContent = '';
+    progressBar.style.width = '0%';
+    pauseButton.disabled = true;
+    skipButton.disabled = true;
     refreshStrip();
-    setStatus('Uploads cleared');
-    if (playlist.size() > 0) draw(playlist.current());
+    setStatus('Cleared');
 }
 
 async function begin() {
     stage.classList.add('running');
     startButton.classList.add('hidden');
 
-    setStatus('Loading playlist…');
-    manifestItems = await loadManifest();
+    setStatus('Loading…');
+    manifestItems = examplesDismissed() ? [] : await loadManifest();
 
     let stored = [];
     try {
@@ -201,7 +236,7 @@ async function begin() {
     refreshStrip();
 
     if (playlist.size() === 0) {
-        setStatus('Drop images anywhere, or use Open…');
+        setStatus('');
         return;
     }
 
@@ -235,7 +270,24 @@ speedButton.addEventListener('click', () => {
 
 nextButton.addEventListener('click', () => draw(playlist.next()));
 prevButton.addEventListener('click', () => draw(playlist.previous()));
-clearButton.addEventListener('click', clearUploads);
+clearButton.addEventListener('click', clearAll);
+
+function showUI() {
+    stage.classList.remove('ui-hidden');
+}
+
+function hideUI() {
+    if (stage.classList.contains('ui-hidden')) return;
+    stage.classList.add('ui-hidden');
+
+    // Wait a tick before listening: the very click that hid the UI is still
+    // bubbling toward window, and would bring it straight back.
+    setTimeout(() => {
+        window.addEventListener('click', showUI, { once: true });
+    }, 0);
+}
+
+hideButton.addEventListener('click', hideUI);
 
 saveButton.addEventListener('click', () => {
     const data = renderer.toJPEG();
@@ -277,6 +329,15 @@ window.addEventListener('drop', (event) => {
 });
 
 window.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+        showUI();
+        return;
+    }
+    if (event.key === 'h' || event.key === 'H') {
+        if (stage.classList.contains('ui-hidden')) showUI();
+        else hideUI();
+        return;
+    }
     if (event.key === ' ') {
         event.preventDefault();
         pauseButton.click();

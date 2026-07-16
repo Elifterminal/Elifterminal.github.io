@@ -6,11 +6,11 @@
 // pen lays down light, so this is chalk on black paper: bright areas get packed
 // with strokes, dark areas get left bare and the background shows through.
 
-import { HATCH, HATCH_PASSES } from './config.js?v=2';
-import { clamp, lerp } from './geometry.js?v=2';
-import { createSpatialGrid } from './grid.js?v=2';
-import { sampleAngle, sampleTone, sampleColor } from './fields.js?v=2';
-import { packStroke } from './stroke.js?v=2';
+import { HATCH, HATCH_PASSES } from './config.js?v=3';
+import { clamp, lerp } from './geometry.js?v=3';
+import { createSpatialGrid } from './grid.js?v=3';
+import { sampleAngle, sampleTone, sampleColor } from './fields.js?v=3';
+import { packStroke } from './stroke.js?v=3';
 
 function separationAt(fields, x, y, sepMul) {
     const tone = sampleTone(fields, x, y);

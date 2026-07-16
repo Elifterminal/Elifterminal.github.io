@@ -1,10 +1,10 @@
 // Phase 1: the structural lines. Canny-style edge detection, then walk the
 // surviving pixels into polylines the pen can draw in one go.
 
-import { CONTOURS } from './config.js?v=2';
-import { simplify, pathLength } from './geometry.js?v=2';
-import { sampleColor, sampleTone } from './fields.js?v=2';
-import { packStroke } from './stroke.js?v=2';
+import { CONTOURS } from './config.js?v=3';
+import { simplify, pathLength } from './geometry.js?v=3';
+import { sampleColor, sampleTone } from './fields.js?v=3';
+import { packStroke } from './stroke.js?v=3';
 
 function percentileThreshold(magnitude, percentile) {
     const sample = [];

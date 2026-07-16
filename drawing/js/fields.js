@@ -5,8 +5,8 @@
 // each function allocates its own buffers and hands back a frozen result; no
 // buffer is ever shared or mutated across module boundaries.
 
-import { FIELDS, TONE } from './config.js?v=2';
-import { blendAngles, clamp } from './geometry.js?v=2';
+import { FIELDS, TONE } from './config.js?v=3';
+import { blendAngles, clamp } from './geometry.js?v=3';
 
 function gaussianKernel(sigma) {
     const radius = Math.max(1, Math.ceil(sigma * 3));

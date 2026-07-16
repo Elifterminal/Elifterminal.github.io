@@ -5,7 +5,7 @@
 // redrawn (segments are painted once, onto the offscreen, and stay there), and
 // a window resize only recomputes the transform, so it no longer wipes the art.
 
-import { RENDER } from './config.js?v=2';
+import { RENDER } from './config.js?v=3';
 
 export function createRenderer(canvas) {
     const ctx = canvas.getContext('2d');

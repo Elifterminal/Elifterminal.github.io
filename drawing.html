@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Drawn</title>
-    <link rel="stylesheet" href="drawing/style.css?v=2">
+    <link rel="stylesheet" href="drawing/style.css?v=3">
 </head>
 <body>
     <div id="stage" class="stage">
@@ -35,16 +35,23 @@
                 <!-- A label, not a button: clicking it opens the picker natively.
                      Scripting input.click() instead is what browsers block. -->
                 <label id="open-button" class="control-button" for="file-input">Open…</label>
-                <button id="clear-button" class="control-button" disabled>Clear uploads</button>
+                <button id="clear-button" class="control-button" disabled>Clear all</button>
+                <button id="hide-button" class="control-button">Hide UI</button>
             </div>
         </div>
 
         <div id="progress"><div id="progress-bar"></div></div>
 
+        <div id="empty-state">
+            <p class="empty-title">No pictures yet</p>
+            <p class="empty-sub">Drop some here, or use Open… — they cycle in order and stay in this browser.</p>
+        </div>
+
+        <div id="ui-hint">Click anywhere to bring the controls back</div>
         <div id="drop-hint">Drop an image to draw it</div>
         <input id="file-input" type="file" accept="image/*" multiple>
     </div>
 
-    <script type="module" src="drawing/js/main.js?v=2"></script>
+    <script type="module" src="drawing/js/main.js?v=3"></script>
 </body>
 </html>

@@ -1,4 +1,5 @@
 {
+  "_comment": "Example playlist every visitor starts on. 'Clear all' drops these and remembers, so a browser set up with its own uploads never sees them again. To ship your own public playlist, put files in drawing/images/ and list them here.",
   "images": [
     { "src": "drawing/images/cyber-oracle.jpg", "title": "Cyber Oracle" },
     { "src": "assets/canyon-dusk.jpg", "title": "Canyon Dusk" }

@@ -3,7 +3,7 @@
 // monitor. (The original tied speed to frame count and silently ran 2.4x fast
 // on a high-refresh display.)
 
-import { ANIMATION } from './config.js?v=2';
+import { ANIMATION } from './config.js?v=3';
 
 export function createAnimator({ renderer, onProgress, onComplete }) {
     let strokes = [];

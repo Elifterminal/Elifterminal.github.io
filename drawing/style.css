@@ -187,6 +187,68 @@ html, body {
     display: flex;
 }
 
+/* Needs the extra class to outrank .stage.running above — same specificity
+   would just leave this at the mercy of rule order. */
+.stage.running.ui-hidden #hud,
+.stage.running.ui-hidden #dock,
+.stage.running.ui-hidden #progress {
+    display: none;
+}
+
+#ui-hint {
+    position: absolute;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 13px;
+    letter-spacing: 0.04em;
+    display: none;
+    pointer-events: none;
+}
+
+.stage.ui-hidden #ui-hint {
+    display: block;
+    animation: fade-away 2.6s ease forwards;
+}
+
+@keyframes fade-away {
+    0%, 55% { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+#empty-state {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    text-align: center;
+    padding: 0 24px;
+    pointer-events: none;
+}
+
+.stage.running.empty:not(.ui-hidden) #empty-state {
+    display: flex;
+}
+
+.empty-title {
+    margin: 0;
+    font-size: 20px;
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.empty-sub {
+    margin: 0;
+    font-size: 14px;
+    max-width: 34ch;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.45);
+}
+
 .stage.running #progress {
     display: block;
 }
