@@ -1,12 +1,12 @@
 // Wiring: playlist -> planner -> animator -> renderer, plus the controls.
 
-import { ANIMATION } from './config.js';
-import { createRenderer } from './renderer.js';
-import { createAnimator } from './animator.js';
-import { createPlaylist, loadManifest, storedToItem } from './playlist.js';
-import { createStrip } from './strip.js';
-import { addImages, listImages, deleteImage, clearImages } from './store.js';
-import { planDrawing } from './planner.js';
+import { ANIMATION } from './config.js?v=2';
+import { createRenderer } from './renderer.js?v=2';
+import { createAnimator } from './animator.js?v=2';
+import { createPlaylist, loadManifest, storedToItem } from './playlist.js?v=2';
+import { createStrip } from './strip.js?v=2';
+import { addImages, listImages, deleteImage, clearImages } from './store.js?v=2';
+import { planDrawing } from './planner.js?v=2';
 
 const canvas = document.getElementById('canvas');
 const startButton = document.getElementById('start-button');

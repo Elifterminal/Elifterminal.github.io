@@ -1,11 +1,11 @@
 // Image in, ordered stroke list out. Contours first for structure, then the
 // hatching passes coarse to fine, which is roughly the order a person works in.
 
-import { buildFields } from './fields.js';
-import { generateContours } from './contours.js';
-import { generateHatching } from './hatching.js';
-import { toImageData } from './loader.js';
-import { totalPoints, totalLength } from './stroke.js';
+import { buildFields } from './fields.js?v=2';
+import { generateContours } from './contours.js?v=2';
+import { generateHatching } from './hatching.js?v=2';
+import { toImageData } from './loader.js?v=2';
+import { totalPoints, totalLength } from './stroke.js?v=2';
 
 // Analysis blocks the main thread for a second or two. Yielding between phases
 // lets the status text actually paint instead of updating after the fact.

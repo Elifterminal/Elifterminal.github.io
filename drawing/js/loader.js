@@ -5,7 +5,7 @@
 // way to recover after the fact. Same-origin files and blob: URLs from a local
 // file pick are both safe.
 
-import { ANALYSIS } from './config.js';
+import { ANALYSIS } from './config.js?v=2';
 
 export function loadImage(src) {
     return new Promise((resolve, reject) => {

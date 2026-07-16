@@ -2,7 +2,7 @@
 // live URL sees) and extended with whatever has been uploaded into this
 // browser's storage.
 
-import { loadImage, fileToImage } from './loader.js';
+import { loadImage, fileToImage } from './loader.js?v=2';
 
 const MANIFEST_URL = 'drawing/images.json';
 
