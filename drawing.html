@@ -32,7 +32,9 @@
                 <button id="speed-button" class="control-button">1×</button>
                 <button id="next-button" class="control-button">Next</button>
                 <button id="save-button" class="control-button">Save JPG</button>
-                <button id="open-button" class="control-button">Open…</button>
+                <!-- A label, not a button: clicking it opens the picker natively.
+                     Scripting input.click() instead is what browsers block. -->
+                <label id="open-button" class="control-button" for="file-input">Open…</label>
                 <button id="clear-button" class="control-button" disabled>Clear uploads</button>
             </div>
         </div>

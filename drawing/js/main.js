@@ -24,7 +24,6 @@ const speedButton = document.getElementById('speed-button');
 const nextButton = document.getElementById('next-button');
 const prevButton = document.getElementById('prev-button');
 const saveButton = document.getElementById('save-button');
-const openButton = document.getElementById('open-button');
 const clearButton = document.getElementById('clear-button');
 
 const renderer = createRenderer(canvas);
@@ -33,7 +32,9 @@ let playlist = createPlaylist([]);
 let manifestItems = [];
 let speedIndex = ANIMATION.defaultSpeedIndex;
 let holdTimer = null;
-let busy = false;
+// Bumped per draw request. Analysis takes a couple of seconds, and whatever the
+// user asked for last should win rather than be dropped on the floor.
+let drawToken = 0;
 
 const animator = createAnimator({
     renderer,
@@ -82,9 +83,9 @@ function queueNext() {
 }
 
 async function draw(item) {
-    if (!item || busy) return;
+    if (!item) return;
 
-    busy = true;
+    const token = ++drawToken;
     cancelHold();
     animator.stop();
 
@@ -98,8 +99,10 @@ async function draw(item) {
     try {
         setStatus('Loading…');
         const image = await playlist.resolve(item);
+        if (token !== drawToken) return;
 
         const plan = await planDrawing(image, setStatus);
+        if (token !== drawToken) return;
         if (plan.strokes.length === 0) throw new Error('Nothing in this image to draw');
 
         renderer.setDrawing(plan.width, plan.height);
@@ -115,10 +118,9 @@ async function draw(item) {
         skipButton.disabled = false;
         setStatus(`${plan.stats.contours} contours · ${plan.stats.hatchStrokes} hatch strokes`);
     } catch (error) {
+        if (token !== drawToken) return;
         console.error(error);
         setStatus(error.message);
-    } finally {
-        busy = false;
     }
 }
 
@@ -245,8 +247,7 @@ saveButton.addEventListener('click', () => {
     link.click();
 });
 
-openButton.addEventListener('click', () => fileInput.click());
-
+// No click handler for Open… — the label opens the picker itself.
 fileInput.addEventListener('change', (event) => {
     addFiles(event.target.files);
     fileInput.value = '';

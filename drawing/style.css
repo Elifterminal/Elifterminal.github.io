@@ -191,14 +191,21 @@ html, body {
     display: block;
 }
 
+/* Both <button> and the Open… <label> wear this, so pin down the properties a
+   button would not inherit — otherwise the label renders in a different face. */
 .control-button {
+    display: inline-flex;
+    align-items: center;
     background: rgba(255, 255, 255, 0.08);
     border: 1px solid rgba(255, 255, 255, 0.25);
     border-radius: 4px;
     color: #fff;
     padding: 7px 14px;
+    font-family: inherit;
     font-size: 13px;
+    line-height: 1.25;
     cursor: pointer;
+    user-select: none;
     backdrop-filter: blur(6px);
     transition: background 0.2s, border-color 0.2s, opacity 0.2s;
 }
@@ -231,6 +238,15 @@ html, body {
     display: flex;
 }
 
+/* Hidden, but still rendered. display:none makes some browsers refuse to open
+   the picker for it at all — so take it off-screen instead of out of the box
+   model. */
 #file-input {
-    display: none;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    pointer-events: none;
 }
